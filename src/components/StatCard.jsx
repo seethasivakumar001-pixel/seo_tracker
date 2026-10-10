@@ -19,7 +19,7 @@ export function StatCard({
   const isNeutral = change === 0 || change === undefined;
 
   return (
-    <Card className={cn('p-5 relative group hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300', className)}>
+    <Card className={cn('p-5 relative group hover:border-[#0062ff]/40 dark:hover:border-[#0062ff]/40 hover:shadow-lg hover:shadow-[#0062ff]/5 transition-all duration-300', className)}>
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">

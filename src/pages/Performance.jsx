@@ -213,7 +213,7 @@ export function Performance() {
               <button
                 type="submit"
                 disabled={isTestingLive}
-                className="flex-1 md:flex-initial px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 rounded-xl shadow-md shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
+                className="flex-1 md:flex-initial px-6 py-2.5 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] disabled:opacity-50 rounded-xl shadow-md shadow-[#0062ff]/25 transition-all flex items-center justify-center gap-2 cursor-pointer flex-shrink-0"
               >
                 {isTestingLive ? (
                   <>
@@ -239,38 +239,6 @@ export function Performance() {
               )}
             </div>
           </form>
-
-          {/* Quick URL Suggestions */}
-          <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-slate-500 dark:text-slate-400">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quick Audit:</span>
-            {[
-              { label: 'Homepage', path: '/' },
-              { label: 'Sports', path: '/sports' },
-              { label: 'In-Play', path: '/in-play' },
-              { label: 'Casino', path: '/casino' },
-              { label: 'Promotions', path: '/promotions' }
-            ].map((item) => {
-              const url = `https://${activeDomain}${item.path}`;
-              const isCurrent = testUrl === url;
-              return (
-                <button
-                  key={item.path}
-                  type="button"
-                  onClick={() => {
-                    setTestUrl(url);
-                    handleRunLiveTest(url, deviceTab);
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer border ${
-                    isCurrent
-                      ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 shadow-xs'
-                      : 'bg-slate-100/70 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 border-slate-200/60 dark:border-slate-700/60 hover:border-indigo-500/40'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
         </CardContent>
       </Card>
 
@@ -584,7 +552,7 @@ export function Performance() {
               <button
                 type="submit"
                 disabled={isTestingLive}
-                className="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 flex-shrink-0"
+                className="px-3 py-1.5 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 flex-shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add & Audit</span>

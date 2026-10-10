@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { KeyRound, Mail, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
+import { KeyRound, Mail, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -16,66 +16,66 @@ const loginSchema = z.object({
 export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuthStore();
   const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors }
   } = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'alex.morgan@techsphere.io',
-      password: 'password123',
-      rememberMe: true
+      email: '',
+      password: '',
+      rememberMe: false
     }
   });
 
   const onSubmit = async (data) => {
     setIsLoading(true);
     setErrorMsg('');
-    
-    // Simulate network latency
-    setTimeout(() => {
-      try {
-        login(data.email, data.password);
-        toast.success('Welcome back, Alex!');
-        navigate('/dashboard');
-      } catch {
-        setErrorMsg('Invalid email or password credentials.');
-      } finally {
-        setIsLoading(false);
-      }
-    }, 450);
-  };
 
-  const fillDemoCreds = () => {
-    setValue('email', 'alex.morgan@techsphere.io');
-    setValue('password', 'password123');
-    toast('Demo credentials auto-filled', { icon: '✨' });
+    try {
+      const user = await login(data.email, data.password);
+      toast.success(`Welcome back, ${user.name || 'User'}!`);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Auth error:', err);
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
+      toast.error(err.message || 'Authentication failed.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div>
-      <div className="mb-6 text-center">
-        <h2 className="text-xl font-bold text-white tracking-tight">Sign in to your account</h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Access your real-time rankings and SEO intelligence
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+          Welcome Back
+        </h2>
+        <p className="text-xs text-slate-500 mt-1 font-normal">
+          Sign in to access your SEO dashboard and analytics
         </p>
       </div>
 
+      {/* Error Alert */}
       {errorMsg && (
-        <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs flex items-start gap-2 font-medium">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-500" />
+          <div className="flex-1">
+            <p>{errorMsg}</p>
+          </div>
         </div>
       )}
 
+      {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 mb-1.5">
             Email Address
           </label>
           <div className="relative">
@@ -83,75 +83,75 @@ export function Login() {
             <input
               type="email"
               {...register('email')}
-              placeholder="alex@company.com"
-              className="w-full pl-10 pr-3 py-2 text-xs bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              placeholder="name@syscorp.io"
+              className="w-full pl-10 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#0062ff] focus:ring-2 focus:ring-[#0062ff]/10 transition-all font-medium"
             />
           </div>
           {errors.email && (
-            <p className="text-[11px] text-rose-400 mt-1">{errors.email.message}</p>
+            <p className="text-[11px] text-rose-500 mt-1">{errors.email.message}</p>
           )}
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-semibold text-slate-300">
+            <label className="block text-xs font-bold text-slate-700">
               Password
             </label>
-            <span className="text-[11px] text-indigo-400 hover:underline cursor-pointer">
-              Forgot password?
+            <span className="text-[11px] font-medium text-slate-400">
+              Min 6 characters
             </span>
           </div>
           <div className="relative">
             <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               {...register('password')}
               placeholder="••••••••"
-              className="w-full pl-10 pr-3 py-2 text-xs bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#0062ff] focus:ring-2 focus:ring-[#0062ff]/10 transition-all font-medium"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer p-1 rounded-md transition"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4 text-slate-500 hover:text-slate-700" />
+              ) : (
+                <Eye className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+              )}
+            </button>
           </div>
           {errors.password && (
-            <p className="text-[11px] text-rose-400 mt-1">{errors.password.message}</p>
+            <p className="text-[11px] text-rose-500 mt-1">{errors.password.message}</p>
           )}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-slate-400">
+        <div className="flex items-center justify-between pt-1">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               {...register('rememberMe')}
-              className="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900"
+              className="w-4 h-4 rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff]"
             />
-            <span>Remember for 30 days</span>
+            <span className="text-xs text-slate-600 font-medium">Remember me</span>
           </label>
         </div>
 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 px-4 bg-[#0062ff] hover:bg-[#004ecc] active:scale-[0.99] disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-[#0062ff]/25 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
         >
           {isLoading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              <span>Sign In to Dashboard</span>
+              <span>Sign In</span>
               <ArrowRight className="w-4 h-4" />
             </>
           )}
         </button>
-
-        {/* 1-Click Demo Fill Button */}
-        <div className="pt-2 text-center">
-          <button
-            type="button"
-            onClick={fillDemoCreds}
-            className="inline-flex items-center gap-1.5 text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold bg-indigo-950/50 border border-indigo-800/50 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Auto-fill demo credentials
-          </button>
-        </div>
       </form>
     </div>
   );

@@ -153,7 +153,7 @@ export function Reports() {
           <button
             type="button"
             onClick={handleExportPDF}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md shadow-indigo-600/20 transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 transition-all cursor-pointer"
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Export Executive PDF</span>

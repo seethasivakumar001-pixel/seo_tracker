@@ -115,7 +115,7 @@ export function Notifications() {
               markAllAsRead();
               toast.success('Marked all notifications as read');
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md shadow-indigo-600/20 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 transition-all cursor-pointer"
           >
             <CheckCheck className="w-4 h-4" />
             <span>Mark All as Read</span>
@@ -138,10 +138,10 @@ export function Notifications() {
               key={tab.id}
               type="button"
               onClick={() => setActiveFilter(tab.id)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
                 isSelected
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                  : 'bg-white dark:bg-[#111827] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                  ? 'bg-[#0062ff] text-white border-[#0062ff] shadow-xs'
+                  : 'bg-white dark:bg-[#111827] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
               }`}
             >
               {tab.label}

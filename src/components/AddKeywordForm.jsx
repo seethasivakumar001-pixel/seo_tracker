@@ -227,7 +227,7 @@ export function AddKeywordForm({ onSuccess, onCancel, onAddAnother, isModal = fa
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/60 dark:border-slate-750">
           <div>
             <div className="flex items-center gap-2">
-              <History className="w-4 h-4 text-indigo-500" />
+              <History className="w-4 h-4 text-[#0062ff]" />
               <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                 Monthly Position History (6-Month Horizon)
               </h3>
@@ -242,7 +242,7 @@ export function AddKeywordForm({ onSuccess, onCancel, onAddAnother, isModal = fa
             <input
               type="checkbox"
               {...register('backfillHistory')}
-              className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500/30"
+              className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-[#0062ff] focus:ring-[#0062ff]/30"
             />
             <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
               I already have past rankings <span className="text-[10px] text-slate-400 font-normal">(backfill)</span>
@@ -267,7 +267,7 @@ export function AddKeywordForm({ onSuccess, onCancel, onAddAnother, isModal = fa
                     {...register(`monthlyPositions.${m.key}`)}
                     placeholder="—"
                     aria-label={`Ranking for ${m.label}`}
-                    className="w-full text-center px-1.5 py-1.5 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                    className="w-full text-center px-1.5 py-1.5 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0062ff] shadow-2xs"
                   />
                 ) : (
                   <div
@@ -286,14 +286,14 @@ export function AddKeywordForm({ onSuccess, onCancel, onAddAnother, isModal = fa
             {/* Current Month (October 2026) - Read-only live mirror */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="text-[10px] font-bold text-[#0062ff] dark:text-[#38bdf8]">
                   Oct '26
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Live Current Month" />
               </div>
               <div className="relative">
                 <div
-                  className="w-full py-1.5 text-center text-xs font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-2xs select-none"
+                  className="w-full py-1.5 text-center text-xs font-black text-[#0062ff] dark:text-[#38bdf8] bg-blue-50/80 dark:bg-[#0062ff]/15 rounded-xl border border-blue-200 dark:border-[#0062ff]/40 shadow-2xs select-none"
                   title="Automatically synchronized with Current Position"
                 >
                   {watchedNotRanking ? '–' : watchedPosition ? `#${watchedPosition}` : '–'}
@@ -348,7 +348,7 @@ export function AddKeywordForm({ onSuccess, onCancel, onAddAnother, isModal = fa
           type="button"
           onClick={onSubmit}
           disabled={!isValid || isSubmitting}
-          className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-sm hover:shadow-indigo-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-sm hover:shadow-[#0062ff]/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 cursor-pointer"
         >
           {isSubmitting ? (
             <>

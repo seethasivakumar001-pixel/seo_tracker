@@ -28,7 +28,7 @@ import { Badge } from '../components/Badge';
 export function Rankings() {
   const { keywords, getSelectedWebsite } = useSEOStore();
   const currentWebsite = getSelectedWebsite();
-  const siteKeywords = keywords.filter((k) => k.websiteId === currentWebsite?.id);
+  const siteKeywords = keywords.filter((k) => !k.deletedAt && (k.websiteId === currentWebsite?.id || k.projectId === currentWebsite?.id || (currentWebsite?.domain && k.url?.toLowerCase().includes(currentWebsite.domain.toLowerCase()))));
 
   // Position distribution brackets
   const distributionData = [

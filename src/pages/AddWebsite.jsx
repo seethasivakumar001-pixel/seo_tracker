@@ -129,11 +129,26 @@ export function AddWebsite() {
 
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Domain & Project Name Row */}
+            {/* Website Name & Website URL Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Domain Name <span className="text-rose-500">*</span>
+                  Website Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  {...register('projectName')}
+                  placeholder="e.g. TechSphere Global"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0062ff]"
+                />
+                {errors.projectName && (
+                  <p className="text-[11px] text-rose-500 mt-1">{errors.projectName.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Website URL <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -141,27 +156,12 @@ export function AddWebsite() {
                     type="text"
                     {...register('domain')}
                     onBlur={handleDomainBlur}
-                    placeholder="example.com"
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    placeholder="e.g. techsphere.io, example.com"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0062ff]"
                   />
                 </div>
                 {errors.domain && (
                   <p className="text-[11px] text-rose-500 mt-1">{errors.domain.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Project Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  {...register('projectName')}
-                  placeholder="e.g. My Brand Global"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-                {errors.projectName && (
-                  <p className="text-[11px] text-rose-500 mt-1">{errors.projectName.message}</p>
                 )}
               </div>
             </div>
@@ -252,7 +252,7 @@ export function AddWebsite() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-lg shadow-[#0062ff]/30 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

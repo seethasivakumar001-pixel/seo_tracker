@@ -372,7 +372,7 @@ export function AddBacklinkModal({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-500/20 transition-all"
+              className="px-5 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 transition-all cursor-pointer"
             >
               {isEditing ? 'Save Changes' : 'Add Backlink'}
             </button>

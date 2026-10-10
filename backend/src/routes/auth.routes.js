@@ -160,4 +160,49 @@ router.put("/profile", async (req, res) => {
   }
 });
 
+// GET /api/auth/users
+router.get("/users", async (req, res) => {
+  try {
+    const { client, type } = await getDb();
+    let users = [];
+
+    if (type === "postgres") {
+      const r = await client.query("SELECT id, name, email, avatar, created_at FROM users ORDER BY created_at DESC");
+      users = r.rows.map(formatUserRow);
+    } else if (type === "mysql") {
+      const [rows] = await client.query("SELECT id, name, email, avatar, created_at FROM users ORDER BY created_at DESC");
+      users = rows.map(formatUserRow);
+    } else {
+      const rows = client.prepare("SELECT id, name, email, avatar, created_at FROM users ORDER BY created_at DESC").all();
+      users = rows.map(formatUserRow);
+    }
+
+    res.json(users);
+  } catch (err) {
+    console.error("Fetch users error:", err);
+    res.status(500).json({ error: "Failed to fetch users: " + err.message });
+  }
+});
+
+// DELETE /api/auth/users/:id
+router.delete("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { client, type } = await getDb();
+
+    if (type === "postgres") {
+      await client.query("DELETE FROM users WHERE id = $1", [id]);
+    } else if (type === "mysql") {
+      await client.query("DELETE FROM users WHERE id = ?", [id]);
+    } else {
+      client.prepare("DELETE FROM users WHERE id = ?").run(id);
+    }
+
+    res.json({ success: true, message: "User deleted successfully" });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ error: "Failed to delete user: " + err.message });
+  }
+});
+
 export default router;

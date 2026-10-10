@@ -1,9 +1,16 @@
 import { create } from 'zustand';
 
 const getInitialTheme = () => {
-  const saved = localStorage.getItem('rankpulse_theme');
+  const saved = localStorage.getItem('syscorp_theme');
   if (saved) return saved;
-  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  // Clear any legacy dark mode keys
+  try {
+    localStorage.removeItem('rankpulse_theme');
+    localStorage.setItem('syscorp_theme', 'light');
+  } catch {
+    // Ignore storage exceptions
+  }
+  return 'light';
 };
 
 export const useThemeStore = create((set) => ({
@@ -15,11 +22,12 @@ export const useThemeStore = create((set) => ({
     } else {
       document.documentElement.classList.remove('dark');
     }
+    set({ theme });
   },
   toggleTheme: () => {
     set((state) => {
       const newTheme = state.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('rankpulse_theme', newTheme);
+      localStorage.setItem('syscorp_theme', newTheme);
       if (newTheme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {
@@ -29,7 +37,7 @@ export const useThemeStore = create((set) => ({
     });
   },
   setTheme: (theme) => {
-    localStorage.setItem('rankpulse_theme', theme);
+    localStorage.setItem('syscorp_theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {

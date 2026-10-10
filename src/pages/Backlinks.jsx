@@ -116,16 +116,20 @@ export function Backlinks() {
 
   // Active Backlinks for the CURRENT PROJECT
   const projectActiveBacklinks = useMemo(() => {
+    const currentDom = currentDomain ? currentDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : '';
     return backlinks.filter((b) => {
+      if (b.deletedAt || b.isDeleted) return false;
       const matchProject =
         b.projectId === currentProjectId ||
-        (currentProjectId === 'p1' && b.projectId === 'site-1') ||
-        (currentProjectId === 'site-1' && b.projectId === 'p1') ||
-        (currentProjectId === 'p2' && b.projectId === 'site-2') ||
-        (currentProjectId === 'site-2' && b.projectId === 'p2');
-      return matchProject && !b.deletedAt;
+        b.projectId === selectedWebsiteId ||
+        (currentProjectId === 'site-1' && (b.projectId === 'p1' || b.projectId === 'site-1' || !b.projectId)) ||
+        (currentProjectId === 'p1' && (b.projectId === 'p1' || b.projectId === 'site-1' || !b.projectId)) ||
+        (currentProjectId === 'site-2' && (b.projectId === 'p2' || b.projectId === 'site-2')) ||
+        (currentProjectId === 'p2' && (b.projectId === 'p2' || b.projectId === 'site-2')) ||
+        (currentDom && b.submittedUrl && b.submittedUrl.toLowerCase().includes(currentDom));
+      return matchProject;
     });
-  }, [backlinks, currentProjectId]);
+  }, [backlinks, currentProjectId, selectedWebsiteId, currentDomain]);
 
   // Trashed Backlinks
   const trashedBacklinks = useMemo(() => {
@@ -827,7 +831,7 @@ export function Backlinks() {
                         <button
                           type="button"
                           onClick={() => setIsAddModalOpen(true)}
-                          className="px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold inline-flex items-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer"
+                          className="px-4 py-2 rounded-2xl bg-[#0062ff] hover:bg-[#004ecc] text-white text-xs font-bold inline-flex items-center gap-2 shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                         >
                           <PlusCircle className="w-4 h-4" />
                           <span>Add Your First Backlink</span>
@@ -1088,8 +1092,8 @@ export function Backlinks() {
           currentProjectDomain={currentDomain}
           projectName={currentWebsite?.name || currentWebsite?.projectName || currentDomain}
           defaultSubmittedUrl={`https://${currentDomain}`}
-          onImport={(items) => {
-            bulkImportBacklinks(items);
+          onImport={async (items) => {
+            await bulkImportBacklinks(items);
           }}
         />
       )}

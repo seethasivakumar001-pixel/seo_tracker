@@ -4,16 +4,15 @@ import {
   Settings as SettingsIcon,
   Globe,
   Sliders,
-  Bell,
-  Sun,
-  Moon,
   Trash2,
   AlertTriangle,
   Check,
-  Save
+  Save,
+  Users,
+  ShieldCheck
 } from 'lucide-react';
 import { useSEOStore } from '../store/seoStore';
-import { useThemeStore } from '../store/themeStore';
+import { useAuthStore } from '../store/authStore';
 import { searchEngineOptions, countryOptions } from '../data/mockWebsites';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/Card';
 import { Tabs } from '../components/Tabs';
@@ -22,14 +21,16 @@ import toast from 'react-hot-toast';
 
 export function Settings() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isPM = Boolean(user?.isPM || user?.role?.includes('PM') || user?.role?.includes('Project Manager'));
   const {
     websites,
     selectedWebsiteId,
     getSelectedWebsite,
     updateWebsite,
-    deleteWebsite
+    deleteWebsite,
+    assignWebsite
   } = useSEOStore();
-  const { theme, setTheme } = useThemeStore();
 
   const currentWebsite = getSelectedWebsite();
 
@@ -87,10 +88,10 @@ export function Settings() {
       <Tabs
         tabs={[
           { id: 'project', label: 'Project Info' },
+          { id: 'team', label: isPM ? '👑 Team Assignments (PM)' : 'Team & Ownership' },
           { id: 'location', label: 'Search Engine' },
           { id: 'frequency', label: 'Tracking Cadence' },
           { id: 'notifications', label: 'Notifications' },
-          { id: 'appearance', label: 'Appearance' },
           { id: 'danger', label: 'Danger Zone' }
         ]}
         activeTab={activeTab}
@@ -137,7 +138,7 @@ export function Settings() {
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Save Changes</span>
@@ -146,6 +147,98 @@ export function Settings() {
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {/* TAB: TEAM ASSIGNMENTS & OWNERSHIP */}
+      {activeTab === 'team' && (
+        <div className="space-y-6">
+          {/* Active User Account Summary */}
+          <div className="p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-3.5">
+              <img
+                src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || 'User')}`}
+                alt={user?.name}
+                className="w-12 h-12 rounded-xl object-cover ring-2 ring-[#0062ff]/20 flex-shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name || 'SEO Specialist'}</p>
+                  {isPM && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-500/15 text-[#0062ff]">
+                      Manager
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                <p className="text-[11px] font-semibold text-[#0062ff] mt-0.5">
+                  Connected to Database Account
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Project Assignments Management Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between w-full">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#0062ff]" />
+                    <span>Project Ownership & Assignments</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Overview of your tracked domains and website ownership.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-[10px] font-extrabold uppercase text-slate-400">
+                      <th className="pb-3 px-3">Website Domain</th>
+                      <th className="pb-3 px-3">Project Name</th>
+                      <th className="pb-3 px-3">Keywords</th>
+                      <th className="pb-3 px-3">SEO Health</th>
+                      <th className="pb-3 px-3">Assigned Owner</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {websites.map((site) => {
+                      return (
+                        <tr key={site.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
+                            <div className="flex items-center gap-2">
+                              <Globe className="w-3.5 h-3.5 text-slate-400" />
+                              <span>{site.domain}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-slate-600 dark:text-slate-300">
+                            {site.projectName}
+                          </td>
+                          <td className="py-3 px-3 font-mono font-semibold text-[#0062ff]">
+                            {site.totalKeywords || 0}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500">
+                              {site.seoScore || 85}%
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              👤 {site.assignedName || user?.name || 'Owner'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* TAB 2: SEARCH ENGINE & LOCATION */}
@@ -194,7 +287,7 @@ export function Settings() {
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Save Localization</span>
@@ -249,7 +342,7 @@ export function Settings() {
               <button
                 type="button"
                 onClick={handleSaveSettings}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save Cadence</span>
@@ -290,7 +383,7 @@ export function Settings() {
               <button
                 type="button"
                 onClick={() => toast.success('Notification preferences saved')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save Preferences</span>
@@ -300,48 +393,7 @@ export function Settings() {
         </Card>
       )}
 
-      {/* TAB 5: APPEARANCE */}
-      {activeTab === 'appearance' && (
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Interface Theme</CardTitle>
-              <CardDescription>Select between sleek dark mode or clean light mode</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 max-w-md">
-              <button
-                type="button"
-                onClick={() => setTheme('light')}
-                className={`p-4 rounded-xl border text-center transition-all ${
-                  theme === 'light'
-                    ? 'border-indigo-500 bg-indigo-50/50 shadow-md ring-2 ring-indigo-500'
-                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-                }`}
-              >
-                <Sun className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                <span className="text-xs font-bold block text-slate-900 dark:text-white">Light Mode</span>
-                <span className="text-[10px] text-slate-400">Crisp white & slate</span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => setTheme('dark')}
-                className={`p-4 rounded-xl border text-center transition-all ${
-                  theme === 'dark'
-                    ? 'border-indigo-500 bg-indigo-950/50 shadow-md ring-2 ring-indigo-500'
-                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-800'
-                }`}
-              >
-                <Moon className="w-6 h-6 text-indigo-400 mx-auto mb-2" />
-                <span className="text-xs font-bold block text-slate-900 dark:text-white">Dark Mode</span>
-                <span className="text-[10px] text-slate-400">Deep obsidian & navy</span>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* TAB 6: DANGER ZONE */}
       {activeTab === 'danger' && (

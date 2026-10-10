@@ -247,7 +247,7 @@ print(soup.prettify())`;
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full md:w-auto px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5 flex-shrink-0 cursor-pointer"
+              className="w-full md:w-auto px-5 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 transition-all flex items-center justify-center gap-1.5 flex-shrink-0 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
               <span>Audit On-Page</span>

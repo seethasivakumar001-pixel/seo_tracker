@@ -148,7 +148,47 @@ export const useSEOStore = create((set, get) => ({
             localStorage.setItem("rankpulse_keywords", JSON.stringify(normalizedKeywords));
           }
 
+          const dbProjects = (data.projects || []).filter((p) => !p.deletedAt);
+          const currentWebsites = get().websites;
+
+          const loadedWebsites = dbProjects.map((p, idx) => {
+            const existing = currentWebsites.find((w) => w.id === p.id || w.domain === p.domain);
+            const kwCount = normalizedKeywords.filter(
+              (k) => (k.projectId === p.id || k.websiteId === p.id) && !k.deletedAt
+            ).length;
+            return {
+              id: p.id,
+              domain: p.domain || p.name.toLowerCase().replace(/\s+/g, '') + '.com',
+              projectName: p.name,
+              searchEngine: existing?.searchEngine || 'Google US (google.com)',
+              country: existing?.country || 'United States',
+              countryCode: existing?.countryCode || 'US',
+              trackingFrequency: existing?.trackingFrequency || 'Daily',
+              createdAt: existing?.createdAt || new Date().toISOString(),
+              seoScore: existing?.seoScore || 88,
+              organicTraffic: existing?.organicTraffic || 100000,
+              trafficChange: existing?.trafficChange || 5.0,
+              totalKeywords: kwCount,
+              keywordsChange: 0,
+              totalBacklinks: existing?.totalBacklinks || 12000,
+              backlinksChange: 0,
+              referringDomains: existing?.referringDomains || 800,
+              domainRating: existing?.domainRating || 65,
+              crawlHealth: existing?.crawlHealth || 90,
+              device: 'Desktop & Mobile',
+              isPrimary: idx === 0,
+              assignedTo: existing?.assignedTo || 'usr-admin',
+              assignedName: existing?.assignedName || 'Admin'
+            };
+          });
+
+          if (loadedWebsites.length > 0) {
+            localStorage.setItem("rankpulse_websites", JSON.stringify(loadedWebsites));
+          }
+
           set({
+            websites: loadedWebsites.length > 0 ? loadedWebsites : get().websites,
+            selectedWebsiteId: loadedWebsites[0]?.id || get().selectedWebsiteId,
             projects: data.projects?.length ? data.projects : get().projects,
             categories: data.categories?.length ? data.categories : get().categories,
             keywords: normalizedKeywords,
@@ -163,70 +203,114 @@ export const useSEOStore = create((set, get) => ({
   setActiveProjectId: (id) => set({ activeProjectId: id }),
 
   // Website Actions
-  setSelectedWebsiteId: (id) => set({ selectedWebsiteId: id }),
+  setSelectedWebsiteId: (id) => set({ selectedWebsiteId: id, activeProjectId: id }),
 
   getSelectedWebsite: () => {
     const { websites, selectedWebsiteId } = get();
     return websites.find((w) => w.id === selectedWebsiteId) || websites[0];
   },
 
-  addWebsite: (newSite) => {
-    const id = `site-${Date.now()}`;
+  addWebsite: async (newSite) => {
+    const id = `p_${Date.now().toString(36)}`;
+    const cleanDomain = newSite.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
     const website = {
       id,
-      domain: newSite.domain.replace(/^https?:\/\//, "").replace(/\/$/, ""),
-      projectName: newSite.projectName || newSite.domain,
+      domain: cleanDomain,
+      projectName: newSite.projectName || cleanDomain,
       searchEngine: newSite.searchEngine || "Google US (google.com)",
       country: newSite.country || "United States",
       countryCode: newSite.countryCode || "US",
       trackingFrequency: newSite.trackingFrequency || "Daily",
       createdAt: new Date().toISOString(),
-      seoScore: Math.floor(Math.random() * 20) + 75,
-      organicTraffic: Math.floor(Math.random() * 50000) + 20000,
-      trafficChange: +(Math.random() * 10 - 2).toFixed(1),
+      seoScore: 85,
+      organicTraffic: 10000,
+      trafficChange: 0,
       totalKeywords: 0,
       keywordsChange: 0,
-      totalBacklinks: Math.floor(Math.random() * 4000) + 500,
-      backlinksChange: +(Math.random() * 8 + 2).toFixed(1),
-      referringDomains: Math.floor(Math.random() * 300) + 50,
-      domainRating: Math.floor(Math.random() * 40) + 35,
-      crawlHealth: Math.floor(Math.random() * 15) + 80,
+      totalBacklinks: 0,
+      backlinksChange: 0,
+      referringDomains: 0,
+      domainRating: 50,
+      crawlHealth: 90,
       device: newSite.device || "Desktop & Mobile",
       isPrimary: false,
+      assignedTo: newSite.assignedTo || 'usr-admin',
+      assignedName: newSite.assignedName || 'Admin'
+    };
+
+    const newProj = {
+      id,
+      name: website.projectName,
+      domain: website.domain,
+      deletedAt: null,
+      deletedWith: null,
     };
 
     set((state) => {
-      const updated = [...state.websites, website];
-      localStorage.setItem("rankpulse_websites", JSON.stringify(updated));
-      return { websites: updated, selectedWebsiteId: id };
+      const updatedWebsites = [...state.websites, website];
+      const updatedProjects = [...state.projects, newProj];
+      localStorage.setItem("rankpulse_websites", JSON.stringify(updatedWebsites));
+      localStorage.setItem("seo_projects", JSON.stringify(updatedProjects));
+      return {
+        websites: updatedWebsites,
+        projects: updatedProjects,
+        selectedWebsiteId: id,
+        activeProjectId: id,
+      };
     });
+
+    await apiCreateProject(newProj);
     return website;
   },
 
-  updateWebsite: (id, updates) => {
+  assignWebsite: (websiteId, userId, userName) => {
     set((state) => {
-      const updated = state.websites.map((w) => (w.id === id ? { ...w, ...updates } : w));
+      const updated = state.websites.map((w) =>
+        w.id === websiteId ? { ...w, assignedTo: userId, assignedName: userName } : w
+      );
       localStorage.setItem("rankpulse_websites", JSON.stringify(updated));
       return { websites: updated };
     });
   },
 
-  deleteWebsite: (id) => {
+  updateWebsite: async (id, updates) => {
+    set((state) => {
+      const updated = state.websites.map((w) => (w.id === id ? { ...w, ...updates } : w));
+      localStorage.setItem("rankpulse_websites", JSON.stringify(updated));
+      return { websites: updated };
+    });
+
+    if (updates.projectName || updates.domain) {
+      await apiUpdateProject(id, {
+        name: updates.projectName,
+        domain: updates.domain,
+      });
+    }
+  },
+
+  deleteWebsite: async (id) => {
     set((state) => {
       const updatedWebsites = state.websites.filter((w) => w.id !== id);
       const nextSelected = updatedWebsites[0]?.id || "";
       localStorage.setItem("rankpulse_websites", JSON.stringify(updatedWebsites));
 
       // Also cleanup associated keywords
-      const updatedKeywords = state.keywords.filter((k) => k.websiteId !== id);
+      const updatedKeywords = state.keywords.filter((k) => k.websiteId !== id && k.projectId !== id);
       localStorage.setItem("rankpulse_keywords", JSON.stringify(updatedKeywords));
+
+      const updatedProjects = state.projects.filter((p) => p.id !== id);
+      localStorage.setItem("seo_projects", JSON.stringify(updatedProjects));
 
       return {
         websites: updatedWebsites,
+        projects: updatedProjects,
         selectedWebsiteId: nextSelected,
+        activeProjectId: nextSelected,
         keywords: updatedKeywords,
       };
     });
+
+    await apiDeleteProject(id);
   },
 
   // Project Actions (Soft Delete & Restore)
@@ -518,26 +602,90 @@ export const useSEOStore = create((set, get) => ({
 
   bulkAddKeywords: async (keywordsList, defaults = {}) => {
     const { selectedWebsiteId, activeProjectId } = get();
-    const createdKeywords = keywordsList.map((kwText, idx) => {
+    const targetSiteId = selectedWebsiteId || activeProjectId || get().getSelectedWebsite()?.id || 'site-1';
+
+    const createdKeywords = keywordsList.map((item, idx) => {
+      if (typeof item === 'object' && item !== null) {
+        const kwText = String(item.keyword || item.name || '').trim();
+        const position = item.position !== undefined && item.position !== null && !isNaN(Number(item.position))
+          ? Number(item.position)
+          : Math.floor(Math.random() * 30) + 1;
+
+        const history30d = Array.isArray(item.history) && item.history.length > 0
+          ? item.history
+          : Array.from({ length: 30 }, () => Math.max(1, Math.min(100, Math.round(position + (Math.random() - 0.5) * 5))));
+        if (history30d.length > 0) history30d[history30d.length - 1] = position;
+
+        const monthlyPositions = item.monthly || item.monthlyPositions || {
+          "2026-05": position + 7,
+          "2026-06": position + 5,
+          "2026-07": position + 3,
+          "2026-08": position + 2,
+          "2026-09": position + 1,
+          "2026-10": position,
+        };
+
+        const targetUrlVal = item.url || item.targetUrl || defaults.url || defaults.targetUrl || `https://${get().getSelectedWebsite()?.domain || "example.com"}/`;
+
+        return {
+          id: item.id || `kw-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+          websiteId: item.websiteId || targetSiteId,
+          projectId: item.projectId || targetSiteId,
+          keyword: kwText,
+          position,
+          previousPosition: item.previousPosition !== undefined && item.previousPosition !== null && !isNaN(Number(item.previousPosition))
+            ? Number(item.previousPosition)
+            : (position + (Math.floor(Math.random() * 5) - 2)),
+          change: item.change !== undefined ? Number(item.change) : 0,
+          volume: item.volume !== undefined && !isNaN(Number(item.volume))
+            ? Number(item.volume)
+            : (Math.floor(Math.random() * 12000) + 1000),
+          difficulty: item.difficulty !== undefined && !isNaN(Number(item.difficulty))
+            ? Number(item.difficulty)
+            : (Math.floor(Math.random() * 70) + 15),
+          cpc: item.cpc !== undefined && !isNaN(Number(item.cpc))
+            ? Number(item.cpc)
+            : +(Math.random() * 12 + 2).toFixed(2),
+          targetUrl: targetUrlVal,
+          url: targetUrlVal,
+          group: item.group || item.category || defaults.group || "Core Features",
+          device: item.device || defaults.device || "desktop",
+          location: item.location || defaults.location || "United States",
+          serpFeatures: item.serpFeatures || ["People Also Ask", "SiteLinks"],
+          lastUpdated: item.lastUpdated || new Date().toISOString().split("T")[0],
+          bestPosition: item.bestPosition || Math.max(1, position - 3),
+          worstPosition: item.worstPosition || position + 10,
+          history30d,
+          history: history30d,
+          monthlyPositions,
+          monthly: monthlyPositions,
+          deletedAt: null,
+          deletedWith: null,
+        };
+      }
+
+      const kwText = String(item || '').trim();
       const position = Math.floor(Math.random() * 30) + 1;
       const history30d = Array.from({ length: 30 }, () =>
         Math.max(1, Math.min(100, Math.round(position + (Math.random() - 0.5) * 5)))
       );
       history30d[history30d.length - 1] = position;
 
+      const targetUrlVal = defaults.targetUrl || defaults.url || `https://${get().getSelectedWebsite()?.domain || "example.com"}/`;
+
       return {
-        id: `kw-${Date.now()}-${idx}`,
-        websiteId: selectedWebsiteId,
-        projectId: activeProjectId,
-        keyword: kwText.trim(),
+        id: `kw-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+        websiteId: targetSiteId,
+        projectId: targetSiteId,
+        keyword: kwText,
         position,
         previousPosition: position + (Math.floor(Math.random() * 5) - 2),
         change: 0,
         volume: Math.floor(Math.random() * 12000) + 1000,
         difficulty: Math.floor(Math.random() * 70) + 15,
         cpc: +(Math.random() * 12 + 2).toFixed(2),
-        targetUrl: defaults.targetUrl || defaults.url || `https://${get().getSelectedWebsite()?.domain || "example.com"}/`,
-        url: defaults.url || defaults.targetUrl || `https://${get().getSelectedWebsite()?.domain || "example.com"}/`,
+        targetUrl: targetUrlVal,
+        url: targetUrlVal,
         group: defaults.group || "Core SaaS",
         device: defaults.device || "desktop",
         location: defaults.location || "United States",
@@ -569,7 +717,9 @@ export const useSEOStore = create((set, get) => ({
     });
 
     createdKeywords.forEach((k) => {
-      k.change = k.previousPosition - k.position;
+      if (k.previousPosition !== undefined && k.position !== undefined) {
+        k.change = k.previousPosition - k.position;
+      }
     });
 
     set((state) => {
@@ -579,7 +729,11 @@ export const useSEOStore = create((set, get) => ({
     });
 
     for (const kw of createdKeywords) {
-      await apiCreateKeyword(kw);
+      try {
+        await apiCreateKeyword(kw);
+      } catch (err) {
+        console.warn("apiCreateKeyword error:", err);
+      }
     }
 
     return createdKeywords;

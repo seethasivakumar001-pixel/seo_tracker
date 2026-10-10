@@ -42,13 +42,13 @@ export async function getDb() {
         dbUrl
           ? { connectionString: dbUrl, ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false }
           : {
-              host: process.env.PGHOST || "localhost",
-              port: Number(process.env.PGPORT) || 5432,
-              user: process.env.PGUSER || "postgres",
-              password: process.env.PGPASSWORD || "",
-              database: process.env.PGDATABASE || "seo_tracker",
-              ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
-            }
+            host: process.env.PGHOST || "localhost",
+            port: Number(process.env.PGPORT) || 5432,
+            user: process.env.PGUSER || "postgres",
+            password: process.env.PGPASSWORD || "",
+            database: process.env.PGDATABASE || "seo_tracker",
+            ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+          }
       );
 
       await pool.query("SELECT NOW()");
@@ -86,14 +86,14 @@ export async function getDb() {
       const pool = dbUrl
         ? mysql.createPool(dbUrl)
         : mysql.createPool({
-            host,
-            port,
-            user,
-            password,
-            database,
-            waitForConnections: true,
-            connectionLimit: 10,
-          });
+          host,
+          port,
+          user,
+          password,
+          database,
+          waitForConnections: true,
+          connectionLimit: 10,
+        });
 
       await pool.query("SELECT 1");
       console.log(`⚡ Connected successfully to MySQL database "${database}".`);
@@ -244,7 +244,7 @@ function initSqliteSchema(db) {
   for (const col of alterKeywordCols) {
     try {
       db.exec(`ALTER TABLE keywords ADD COLUMN ${col};`);
-    } catch {}
+    } catch { }
   }
 
   const alterCols = [
@@ -261,7 +261,23 @@ function initSqliteSchema(db) {
   for (const col of alterCols) {
     try {
       db.exec(`ALTER TABLE backlinks ADD COLUMN ${col};`);
-    } catch {}
+    } catch { }
+  }
+
+  // Seed default users if empty
+  try {
+    const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get();
+    if (!userCount || userCount.count === 0) {
+      const seedUsers = [
+        { id: 'usr-pm', name: 'Product Manager', email: 'pm@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
+      ];
+      const stmt = db.prepare("INSERT INTO users (id, name, email, password_hash, avatar) VALUES (?, ?, ?, ?, ?)");
+      for (const u of seedUsers) {
+        stmt.run(u.id, u.name, u.email, hashPassword(u.pass), u.avatar);
+      }
+    }
+  } catch (seedErr) {
+    console.warn("User seeding error:", seedErr.message);
   }
 }
 
@@ -379,7 +395,7 @@ async function initPostgresSchema(pool) {
   for (const col of pgKeywordCols) {
     try {
       await pool.query(`ALTER TABLE keywords ADD COLUMN IF NOT EXISTS ${col};`);
-    } catch {}
+    } catch { }
   }
 
   const pgCols = [
@@ -396,7 +412,29 @@ async function initPostgresSchema(pool) {
   for (const col of pgCols) {
     try {
       await pool.query(`ALTER TABLE backlinks ADD COLUMN IF NOT EXISTS ${col};`);
-    } catch {}
+    } catch { }
+  }
+
+  // Seed default users if empty
+  try {
+    const userRes = await pool.query("SELECT COUNT(*) as count FROM users");
+    const count = parseInt(userRes.rows[0]?.count || 0, 10);
+    if (count === 0) {
+      const seedUsers = [
+        { id: 'usr-pm', name: 'Product Manager', email: 'pm@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
+        { id: 'usr-admin', name: 'Admin User', email: 'admin@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
+        { id: 'usr-david', name: 'David Kim', email: 'david@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
+        { id: 'usr-priya', name: 'Priya Sharma', email: 'priya@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
+      ];
+      for (const u of seedUsers) {
+        await pool.query(
+          "INSERT INTO users (id, name, email, password_hash, avatar) VALUES ($1, $2, $3, $4, $5)",
+          [u.id, u.name, u.email, hashPassword(u.pass), u.avatar]
+        );
+      }
+    }
+  } catch (seedErr) {
+    console.warn("Postgres user seeding error:", seedErr.message);
   }
 }
 
@@ -498,7 +536,7 @@ async function initMysqlSchema(pool) {
       if (!colCheck.length) {
         await pool.query(`ALTER TABLE keywords ADD COLUMN ${c.name} ${c.def}`);
       }
-    } catch {}
+    } catch { }
   }
 
   await pool.query(`
@@ -547,7 +585,7 @@ async function initMysqlSchema(pool) {
       if (!colCheck.length) {
         await pool.query(`ALTER TABLE backlinks ADD COLUMN ${c.name} ${c.def}`);
       }
-    } catch {}
+    } catch { }
   }
 
   await pool.query(`
@@ -559,4 +597,26 @@ async function initMysqlSchema(pool) {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  // Seed default users if empty
+  try {
+    const [userRows] = await pool.query("SELECT COUNT(*) as count FROM users");
+    const count = userRows[0]?.count || 0;
+    if (count === 0) {
+      const seedUsers = [
+        { id: 'usr-pm', name: 'Product Manager', email: 'pm@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
+        { id: 'usr-admin', name: 'Admin User', email: 'admin@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
+        { id: 'usr-david', name: 'David Kim', email: 'david@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
+        { id: 'usr-priya', name: 'Priya Sharma', email: 'priya@syscorp.io', pass: 'password123', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
+      ];
+      for (const u of seedUsers) {
+        await pool.query(
+          "INSERT INTO users (id, name, email, password_hash, avatar) VALUES (?, ?, ?, ?, ?)",
+          [u.id, u.name, u.email, hashPassword(u.pass), u.avatar]
+        );
+      }
+    }
+  } catch (seedErr) {
+    console.warn("MySQL user seeding error:", seedErr.message);
+  }
 }

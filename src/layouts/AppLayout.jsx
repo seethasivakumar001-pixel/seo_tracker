@@ -8,10 +8,10 @@ import {
   FileSearch,
   Link2,
   Gauge,
-  FileBarChart2,
   Bell,
   Settings,
   User,
+  UserPlus,
   LogOut,
   Menu,
   X,
@@ -28,10 +28,12 @@ import {
   Folder,
   Trash2,
   PlusSquare,
-  MoreHorizontal
+  MoreHorizontal,
+  Globe,
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 import { useSEOStore } from '../store/seoStore';
-import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useBacklinkStore } from '../store/backlinkStore';
@@ -51,12 +53,11 @@ const mainNavItems = [
   { path: '/on-page-seo', label: 'On-Page SEO', icon: FileSearch },
   { path: '/backlinks', label: 'Backlinks', icon: Link2 },
   { path: '/performance', label: 'Performance', icon: Gauge },
-  { path: '/reports', label: 'Reports', icon: FileBarChart2 },
-  { path: '/notifications', label: 'Notifications', icon: Bell, hasBadge: true },
 ];
 
 const secondaryNavItems = [
   { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/users', label: 'Add User', icon: UserPlus, pmOnly: true },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 
@@ -76,7 +77,6 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
   const {
     websites,
@@ -96,10 +96,28 @@ export function AppLayout() {
     restoreProject,
     purgeProject,
     emptyTrash,
-    addWebsite
+    addWebsite,
+    loadDbData
   } = useSEOStore();
   const { backlinks, addBacklink, restoreBacklink, purgeBacklink } = useBacklinkStore();
   const { getUnreadCount } = useNotificationStore();
+
+  const isPM = Boolean(user?.isPM || user?.role?.includes('PM') || user?.role?.includes('Project Manager'));
+
+  useEffect(() => {
+    loadDbData();
+  }, []);
+
+  const accessibleWebsites = useMemo(() => {
+    return websites || [];
+  }, [websites]);
+
+  // Ensure selectedWebsiteId belongs to accessible projects
+  useEffect(() => {
+    if (accessibleWebsites.length > 0 && !accessibleWebsites.some((w) => w.id === selectedWebsiteId)) {
+      setSelectedWebsiteId(accessibleWebsites[0].id);
+    }
+  }, [accessibleWebsites, selectedWebsiteId, setSelectedWebsiteId]);
 
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
@@ -183,15 +201,17 @@ export function AppLayout() {
 
   const handleCreateProject = (e) => {
     e.preventDefault();
-    if (!newProjDomain.trim()) {
-      toast.error('Please enter a domain');
+    if (!newProjName.trim() && !newProjDomain.trim()) {
+      toast.error('Please enter website name or URL');
       return;
     }
+    const nameVal = newProjName.trim() || newProjDomain.trim();
+    const domainVal = newProjDomain.trim() || (newProjName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + '.com');
     const site = addWebsite({
-      domain: newProjDomain.trim(),
-      projectName: newProjName.trim() || newProjDomain.trim()
+      domain: domainVal,
+      projectName: nameVal
     });
-    toast.success(`Project "${site.projectName}" created`);
+    toast.success(`Website "${nameVal}" created`);
     setNewProjDomain('');
     setNewProjName('');
     setIsAddProjectModalOpen(false);
@@ -276,43 +296,38 @@ export function AppLayout() {
         />
       )}
 
-      {/* Sidebar Navigation - Sticky on Desktop, Independent Scroll Container */}
+      {/* Sidebar Navigation - SysCorp Deep Navy Contrast with Pure White Main View */}
       <aside
         className={cn(
-          'h-full flex-shrink-0 flex flex-col bg-white dark:bg-[#0f172a] border-r border-slate-200/80 dark:border-slate-800/80 transition-all duration-300 ease-in-out z-40 lg:sticky lg:top-0 lg:h-screen shadow-[4px_0_24px_rgba(0,0,0,0.02)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.3)]',
+          'h-full flex-shrink-0 flex flex-col bg-[#071330] border-r border-[#183164]/80 text-white transition-all duration-300 ease-in-out z-40 lg:sticky lg:top-0 lg:h-screen shadow-[4px_0_24px_rgba(0,0,0,0.15)]',
           sidebarCollapsed ? 'w-[74px]' : 'w-64',
           mobileDrawerOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0' : 'fixed inset-y-0 left-0 z-50 -translate-x-full lg:static lg:translate-x-0'
         )}
       >
         {/* Brand Header */}
         <div className={cn(
-          'h-16 flex-shrink-0 flex items-center border-b border-slate-100 dark:border-slate-800/80 transition-all',
+          'h-16 flex-shrink-0 flex items-center border-b border-[#183164]/70 transition-all bg-[#050e24]',
           sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-4'
         )}>
           {!sidebarCollapsed ? (
             <>
               <div
-                className="flex items-center gap-3 overflow-hidden cursor-pointer group min-w-0"
+                className="flex items-center gap-2 overflow-hidden cursor-pointer group min-w-0"
                 onClick={() => navigate('/dashboard')}
               >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-200">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-400 dark:from-white dark:via-indigo-200 dark:to-indigo-400 bg-clip-text text-transparent truncate">
-                    SysCorp
-                  </span>
-                  <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase">
-                    Enterprise SEO
-                  </span>
-                </div>
+                {/* Official SysCorp Logo (White Typography for Dark Navy Sidebar) */}
+                <img
+                  src="/syscorp-logo-dark.png"
+                  alt="SysCorp <Think Simple/>"
+                  className="h-8 max-w-[170px] object-contain group-hover:scale-[1.02] transition-transform duration-200"
+                />
               </div>
 
               {/* Desktop Collapse Toggle */}
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(true)}
-                className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors cursor-pointer"
+                className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#0f2452] transition-colors cursor-pointer"
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
               >
@@ -324,10 +339,14 @@ export function AppLayout() {
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(false)}
-                className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 hover:scale-105 transition-all group relative cursor-pointer"
+                className="p-1.5 rounded-xl hover:bg-[#0f2452] flex items-center justify-center transition-all group relative cursor-pointer"
               >
-                <TrendingUp className="w-5 h-5 text-white" />
-                <div className="absolute -right-1 -top-1 w-4 h-4 bg-indigo-950 border border-indigo-500/50 rounded-full flex items-center justify-center text-indigo-300 shadow-xs">
+                <img
+                  src="/syscorp-icon-dark.png"
+                  alt="SysCorp"
+                  className="h-7 w-auto object-contain group-hover:scale-110 transition-transform"
+                />
+                <div className="absolute -right-1 -top-1 w-4 h-4 bg-[#050e24] border border-[#0062ff]/50 rounded-full flex items-center justify-center text-[#38bdf8] shadow-xs opacity-0 group-hover:opacity-100 transition-opacity">
                   <ChevronRight className="w-2.5 h-2.5" />
                 </div>
               </button>
@@ -338,7 +357,7 @@ export function AppLayout() {
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#0f2452]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -352,7 +371,7 @@ export function AppLayout() {
           {/* Main Section */}
           <div className="space-y-1.5 flex flex-col items-center">
             {!sidebarCollapsed && (
-              <p className="px-3 pb-1 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 tracking-wider uppercase w-full">
+              <p className="px-3 pb-1 text-[10px] font-extrabold text-slate-400 tracking-wider uppercase w-full">
                 Analytics & Intel
               </p>
             )}
@@ -371,11 +390,11 @@ export function AppLayout() {
                       ? 'w-10 h-10 justify-center'
                       : 'w-full gap-3 px-3 py-2.5',
                     isActive
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                      ? 'bg-gradient-to-r from-[#0062ff] to-[#004ecc] text-white shadow-lg shadow-[#0062ff]/35 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-[#0f2452]/70'
                   )}
                 >
-                  <Icon className={cn('w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110', isActive ? 'text-white' : 'text-slate-400 dark:text-slate-400 group-hover:text-indigo-500')} />
+                  <Icon className={cn('w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110', isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#38bdf8]')} />
                   {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                   
                   {item.hasBadge && unreadCount > 0 && (
@@ -383,8 +402,8 @@ export function AppLayout() {
                       className={cn(
                         'rounded-full font-extrabold flex items-center justify-center',
                         sidebarCollapsed
-                          ? 'absolute -top-1 -right-1 w-4 h-4 text-[9px] bg-rose-500 text-white shadow-xs ring-2 ring-white dark:ring-[#0f172a]'
-                          : 'ml-auto px-1.5 py-0.5 text-[10px] ' + (isActive ? 'bg-white text-indigo-700' : 'bg-rose-500 text-white shadow-xs')
+                          ? 'absolute -top-1 -right-1 w-4 h-4 text-[9px] bg-rose-500 text-white shadow-xs ring-2 ring-[#071330]'
+                          : 'ml-auto px-1.5 py-0.5 text-[10px] ' + (isActive ? 'bg-white text-[#0062ff]' : 'bg-rose-500 text-white shadow-xs')
                       )}
                     >
                       {unreadCount}
@@ -417,13 +436,13 @@ export function AppLayout() {
                       ? 'w-10 h-10 justify-center'
                       : 'w-full gap-3 px-3 py-2.5',
                     isTrashOpen
-                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-950/30'
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                      : 'text-slate-300 hover:text-rose-400 hover:bg-rose-950/30'
                   )}
                 >
                   <Trash2 className={cn(
                     'w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110',
-                    isTrashOpen ? 'text-rose-500' : 'text-slate-400 dark:text-slate-400 group-hover:text-rose-500'
+                    isTrashOpen ? 'text-rose-400' : 'text-slate-400 group-hover:text-rose-400'
                   )} />
                   {!sidebarCollapsed && <span className="truncate">Trash</span>}
 
@@ -432,7 +451,7 @@ export function AppLayout() {
                       className={cn(
                         'rounded-full font-extrabold flex items-center justify-center',
                         sidebarCollapsed
-                          ? 'absolute -top-1 -right-1 w-4 h-4 text-[9px] bg-rose-500 text-white shadow-xs ring-2 ring-white dark:ring-[#0f172a]'
+                          ? 'absolute -top-1 -right-1 w-4 h-4 text-[9px] bg-rose-500 text-white shadow-xs ring-2 ring-[#071330]'
                           : 'ml-auto px-1.5 py-0.5 text-[10px] bg-rose-500 text-white shadow-xs'
                       )}
                     >
@@ -454,15 +473,15 @@ export function AppLayout() {
 
           {/* Categories Section (Expanded Only) */}
           {!sidebarCollapsed && (
-            <div className="border-t border-slate-100 dark:border-slate-800/80 pt-3 space-y-1 w-full">
+            <div className="border-t border-[#183164]/70 pt-3 space-y-1 w-full">
               <div className="px-3 pb-1 flex items-center justify-between">
-                <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 tracking-wider uppercase">
+                <p className="text-[10px] font-extrabold text-slate-400 tracking-wider uppercase">
                   Categories
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsAddCategoryModalOpen(true)}
-                  className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center gap-0.5"
+                  className="text-[11px] font-bold text-[#38bdf8] hover:text-white hover:underline cursor-pointer flex items-center gap-0.5"
                 >
                   + Add
                 </button>
@@ -477,11 +496,11 @@ export function AppLayout() {
                     return (
                       <div
                         key={cat.id}
-                        className="group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-all cursor-pointer"
+                        className="group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#0f2452]/70 transition-all cursor-pointer"
                         onClick={() => navigate(`/keywords?category=${encodeURIComponent(cat.name)}`)}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500 group-hover:bg-indigo-500 flex-shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500 group-hover:bg-[#00d2ff] flex-shrink-0" />
                           <span className="truncate">{cat.name}</span>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -492,12 +511,12 @@ export function AppLayout() {
                               softDeleteCategory(cat.id);
                               toast.success(`Category "${cat.name}" moved to Trash`);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity cursor-pointer"
                             title="Delete Category"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
-                          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#0c1f4a] text-slate-300">
                             {count}
                           </span>
                         </div>
@@ -511,8 +530,8 @@ export function AppLayout() {
 
           {/* Quick Actions Section (Expanded Only) */}
           {!sidebarCollapsed && (
-            <div className="border-t border-slate-100 dark:border-slate-800/80 pt-3 space-y-1 w-full">
-              <p className="px-3 pb-1 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 tracking-wider uppercase">
+            <div className="border-t border-[#183164]/70 pt-3 space-y-1 w-full">
+              <p className="px-3 pb-1 text-[10px] font-extrabold text-slate-400 tracking-wider uppercase">
                 Quick Actions
               </p>
 
@@ -520,36 +539,36 @@ export function AppLayout() {
                 <button
                   type="button"
                   onClick={() => setIsAddProjectModalOpen(true)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-all text-left cursor-pointer group"
+                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#0f2452]/70 transition-all text-left cursor-pointer group"
                 >
-                  <PlusSquare className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                  <PlusSquare className="w-3.5 h-3.5 text-[#38bdf8] flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span>+ Add Project</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsAddCategoryModalOpen(true)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-all text-left cursor-pointer group"
+                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#0f2452]/70 transition-all text-left cursor-pointer group"
                 >
-                  <FolderPlus className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                  <FolderPlus className="w-3.5 h-3.5 text-[#38bdf8] flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span>+ Add Category</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsAddBacklinkModalOpen(true)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-all text-left cursor-pointer group"
+                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#0f2452]/70 transition-all text-left cursor-pointer group"
                 >
-                  <Link2 className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                  <Link2 className="w-3.5 h-3.5 text-[#38bdf8] flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span>+ Add Backlink</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => navigate('/keywords?modal=add')}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-all text-left cursor-pointer group"
+                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#0f2452]/70 transition-all text-left cursor-pointer group"
                 >
-                  <KeyRound className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                  <KeyRound className="w-3.5 h-3.5 text-[#38bdf8] flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span>+ Add Keyword</span>
                 </button>
               </div>
@@ -558,15 +577,17 @@ export function AppLayout() {
 
           {/* Configuration Section */}
           <div className={cn(
-            'border-t border-slate-100 dark:border-slate-800/80 pt-3 space-y-1.5 flex flex-col items-center',
+            'border-t border-[#183164]/70 pt-3 space-y-1.5 flex flex-col items-center',
             !sidebarCollapsed && 'w-full'
           )}>
             {!sidebarCollapsed && (
-              <p className="px-3 pb-1 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 tracking-wider uppercase w-full">
+              <p className="px-3 pb-1 text-[10px] font-extrabold text-slate-400 tracking-wider uppercase w-full">
                 System
               </p>
             )}
-            {secondaryNavItems.map((item) => {
+            {secondaryNavItems
+              .filter((item) => !item.pmOnly || isPM)
+              .map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname.startsWith(item.path);
 
@@ -581,11 +602,11 @@ export function AppLayout() {
                       ? 'w-10 h-10 justify-center'
                       : 'w-full gap-3 px-3 py-2.5',
                     isActive
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                      ? 'bg-gradient-to-r from-[#0062ff] to-[#004ecc] text-white shadow-lg shadow-[#0062ff]/35 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-[#0f2452]/70'
                   )}
                 >
-                  <Icon className={cn('w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110', isActive ? 'text-white' : 'text-slate-400 dark:text-slate-400 group-hover:text-indigo-500')} />
+                  <Icon className={cn('w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110', isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#38bdf8]')} />
                   {!sidebarCollapsed && <span>{item.label}</span>}
                 </NavLink>
               );
@@ -601,10 +622,9 @@ export function AppLayout() {
           </div>
         </div>
 
-
         {/* Bottom User Profile Section */}
         <div className={cn(
-          'flex-shrink-0 p-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-[#090d16]/60 flex items-center',
+          'flex-shrink-0 p-3 border-t border-[#183164]/80 bg-[#050e24] flex items-center',
           sidebarCollapsed ? 'justify-center' : 'justify-between'
         )}>
           {sidebarCollapsed ? (
@@ -617,27 +637,27 @@ export function AppLayout() {
                 <img
                   src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
                   alt={user?.name}
-                  className="w-10 h-10 rounded-xl ring-2 ring-indigo-500/20 dark:ring-indigo-400/20 object-cover"
+                  className="w-10 h-10 rounded-xl ring-2 ring-[#0062ff]/40 object-cover"
                 />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-[#0f172a]" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#050e24]" />
               </button>
             </Tooltip>
           ) : (
             <>
               <div
-                className="flex items-center gap-2.5 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2.5 min-w-0 cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => navigate('/profile')}
               >
                 <div className="relative">
                   <img
                     src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
                     alt={user?.name}
-                    className="w-8 h-8 rounded-full ring-2 ring-indigo-500/20 dark:ring-indigo-400/20 object-cover flex-shrink-0"
+                    className="w-8 h-8 rounded-full ring-2 ring-[#0062ff]/40 object-cover flex-shrink-0"
                   />
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-[#0f172a]" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#050e24]" />
                 </div>
                 <div className="truncate">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                  <p className="text-xs font-bold text-white truncate">
                     {user?.name}
                   </p>
                   <p className="text-[10px] text-slate-400 truncate">
@@ -649,7 +669,7 @@ export function AppLayout() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
@@ -660,11 +680,11 @@ export function AppLayout() {
       </aside>
 
       {/* Main Content Area - Fixed Viewport with Independent Scrolling */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-mesh-light dark:bg-mesh-dark">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-white dark:bg-[#050e24]">
         {/* Topbar Header */}
-        <header className="h-16 flex-shrink-0 px-4 sm:px-6 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-30 flex items-center justify-between gap-3 shadow-xs">
-          {/* Left: Mobile menu button (on mobile only) */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+        <header className="h-16 flex-shrink-0 px-4 sm:px-6 bg-white dark:bg-[#091838] border-b border-slate-200/80 dark:border-[#183164]/80 sticky top-0 z-30 flex items-center justify-between gap-3 shadow-xs">
+          {/* Left: Mobile menu button & Active Project Selector */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
@@ -673,6 +693,103 @@ export function AppLayout() {
             >
               <Menu className="w-5 h-5" />
             </button>
+
+            {/* Project Switcher Dropdown */}
+            <div className="relative" ref={siteDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setSiteDropdownOpen(!siteDropdownOpen)}
+                className="h-9 px-3 flex items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] hover:bg-slate-50 dark:hover:bg-slate-800/80 text-xs font-semibold text-slate-800 dark:text-slate-100 shadow-2xs transition-all cursor-pointer group max-w-[220px] sm:max-w-[280px]"
+                title="Switch Active Project / Domain"
+              >
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ring-2 animate-pulse ${isPM ? 'bg-amber-500 ring-amber-500/20' : 'bg-emerald-500 ring-emerald-500/20'}`} />
+                <span className="truncate">{currentSite?.domain || currentSite?.projectName || 'Select Project'}</span>
+                {isPM && (
+                  <span className="hidden sm:inline-block px-1 py-0.2 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-500 dark:text-amber-400">
+                    PM
+                  </span>
+                )}
+                <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 transition-transform duration-200 flex-shrink-0 ml-auto", siteDropdownOpen && "rotate-180")} />
+              </button>
+
+              {siteDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-72 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                        {isPM ? (
+                          <>
+                            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                            <span>PM Monitor ({accessibleWebsites.length} Projects)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Users className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>My Projects ({accessibleWebsites.length})</span>
+                          </>
+                        )}
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {isPM ? 'Viewing cross-team projects' : `Filtered for ${user?.name}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto py-1 px-1 space-y-0.5">
+                    {accessibleWebsites.length === 0 ? (
+                      <div className="px-3 py-3 text-center text-xs text-slate-400 italic">
+                        No projects assigned yet
+                      </div>
+                    ) : (
+                      accessibleWebsites.map((site) => {
+                        const isSelected = site.id === selectedWebsiteId;
+                        return (
+                          <button
+                            key={site.id}
+                            type="button"
+                            onClick={() => handleSelectSite(site.id)}
+                            className={cn(
+                              "w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-all cursor-pointer",
+                              isSelected
+                                ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20"
+                                : "text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 font-medium"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <Globe className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              <div className="truncate flex flex-col">
+                                <span className="truncate">{site.domain}</span>
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-normal">
+                                  {site.assignedName && (
+                                    <span className="text-indigo-500 dark:text-indigo-400 font-semibold">
+                                      👤 {site.assignedName}
+                                    </span>
+                                  )}
+                                  <span>• {site.totalKeywords || 0} kws</span>
+                                </div>
+                              </div>
+                            </div>
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 ml-2" />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  <div className="p-1 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSiteDropdownOpen(false);
+                        setIsAddProjectModalOpen(true);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 rounded-xl flex items-center gap-2 font-semibold cursor-pointer"
+                    >
+                      <PlusSquare className="w-3.5 h-3.5" />
+                      <span>+ Add New Project</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Center: Global Quick Search with Command Badge */}
@@ -709,22 +826,6 @@ export function AppLayout() {
               </button>
             </Tooltip>
 
-            {/* Dark/Light Mode Toggle */}
-            <Tooltip content={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs group flex-shrink-0 cursor-pointer"
-                aria-label="Toggle color theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform duration-300" />
-                ) : (
-                  <Moon className="w-4 h-4 text-indigo-600 group-hover:-rotate-12 transition-transform duration-300" />
-                )}
-              </button>
-            </Tooltip>
-
             {/* Notifications Bell */}
             <Tooltip content="Notifications">
               <button
@@ -747,21 +848,28 @@ export function AppLayout() {
               <button
                 type="button"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="w-9 h-9 flex items-center justify-center p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] hover:ring-2 hover:ring-indigo-500/30 transition-all flex-shrink-0 cursor-pointer"
+                className="h-9 px-2 flex items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] hover:ring-2 hover:ring-indigo-500/30 transition-all flex-shrink-0 cursor-pointer"
               >
                 <img
                   src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
                   alt={user?.name}
-                  className="w-7 h-7 rounded-lg object-cover flex-shrink-0"
+                  className="w-6 h-6 rounded-lg object-cover flex-shrink-0"
                 />
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 hidden sm:inline max-w-[110px] truncate">
+                  {user?.name?.split(' ')[0]}
+                </span>
               </button>
 
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.name}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                <div className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.name}</p>
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{user?.email}</p>
+                    <p className="text-[10px] text-indigo-400 font-medium mt-0.5">{user?.role}</p>
                   </div>
+
                   <div className="py-1 px-1">
                     <button
                       type="button"
@@ -844,7 +952,7 @@ export function AppLayout() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm"
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-lg shadow-sm shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
                   Create Category
                 </button>
@@ -860,8 +968,8 @@ export function AppLayout() {
           <div className="modal-card max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-base">
-                <PlusSquare className="w-5 h-5 text-indigo-500" />
-                <span>Add Tracked Project / Domain</span>
+                <PlusSquare className="w-5 h-5 text-[#0062ff]" />
+                <span>Add Tracked Website</span>
               </div>
               <button type="button" onClick={() => setIsAddProjectModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <X className="w-4 h-4" />
@@ -870,27 +978,27 @@ export function AppLayout() {
             <form onSubmit={handleCreateProject} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Website Domain <span className="text-rose-500">*</span>
+                  Website Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   autoFocus
                   type="text"
-                  placeholder="e.g. techsphere.io, mybrand.com"
-                  value={newProjDomain}
-                  onChange={(e) => setNewProjDomain(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
+                  placeholder="e.g. TechSphere Global"
+                  value={newProjName}
+                  onChange={(e) => setNewProjName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0062ff] text-slate-900 dark:text-white"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Project / Brand Display Name
+                  Website URL <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. TechSphere Global"
-                  value={newProjName}
-                  onChange={(e) => setNewProjName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
+                  placeholder="e.g. techsphere.io, mybrand.com"
+                  value={newProjDomain}
+                  onChange={(e) => setNewProjDomain(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0062ff] text-slate-900 dark:text-white"
                 />
               </div>
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -903,9 +1011,9 @@ export function AppLayout() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/30"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
-                  Create Project
+                  Create Website
                 </button>
               </div>
             </form>

@@ -246,24 +246,34 @@ export function BulkImportBacklinksModal({
     setPreviewItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const handleCommitImport = () => {
+  const handleCommitImport = async () => {
     if (previewItems.length === 0) {
       toast.error('No items to import');
       return;
     }
-    onImport(previewItems);
-    toast.success(`Successfully imported ${previewItems.length} backlinks!`);
-    onClose();
+    try {
+      if (onImport) {
+        await onImport(previewItems);
+      }
+      toast.success(`Successfully imported ${previewItems.length} backlinks!`);
+      setPreviewItems([]);
+      setImportFileName('');
+      setPastedText('');
+      onClose();
+    } catch (err) {
+      console.error('Failed to import backlinks:', err);
+      toast.error('Failed to import backlinks: ' + (err.message || 'Unknown error'));
+    }
   };
 
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div
-        className="modal-card max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150"
+        className="modal-card max-w-2xl w-full max-h-[90vh] flex flex-col p-0 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ═══ Modal Header ═══ */}
-        <div className="flex items-start justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+        {/* ═══ Modal Header (Fixed top) ═══ */}
+        <div className="flex items-start justify-between p-5 pb-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
           <div className="space-y-1">
             <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-base sm:text-lg">
               <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
@@ -287,220 +297,223 @@ export function BulkImportBacklinksModal({
           </button>
         </div>
 
-        {/* ═══ Green Sample Template Banner ═══ */}
-        <div className="bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 dark:border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <h4 className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-400">
-              Need a backlink submission template?
-            </h4>
-            <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
-              Download our pre-formatted sample Excel sheet with backlink submission columns.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={downloadSampleExcel}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-emerald-950 dark:text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl transition shadow-sm whitespace-nowrap self-start sm:self-auto cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download Sample (.xlsx)</span>
-          </button>
-        </div>
-
-        {/* ═══ Segmented Tab Switcher ═══ */}
-        <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-          <button
-            type="button"
-            onClick={() => setImportTab('file')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
-              importTab === 'file'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-            <span>Upload Excel / CSV File</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setImportTab('text')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
-              importTab === 'text'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <FileText className="w-4 h-4 text-indigo-400" />
-            <span>Paste Text / CSV Rows</span>
-          </button>
-        </div>
-
-        {/* ═══ Tab 1: File Upload / Drag & Drop ═══ */}
-        {importTab === 'file' && (
-          <div className="space-y-3">
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDragging(false);
-                if (e.dataTransfer.files?.[0]) {
-                  processImportFile(e.dataTransfer.files[0]);
-                }
-              }}
-              onClick={() => document.getElementById('backlink-excel-input')?.click()}
-              className={`border-2 border-dashed rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3 cursor-pointer transition ${
-                isDragging
-                  ? 'border-indigo-500 bg-indigo-500/10'
-                  : 'border-slate-300 dark:border-slate-700/80 hover:border-indigo-500/70 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/40'
-              }`}
-            >
-              <input
-                id="backlink-excel-input"
-                type="file"
-                accept=".xlsx,.xls,.csv,.txt"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
-                <UploadCloud className="w-6 h-6 text-slate-400 dark:text-slate-300" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
-                  Drag and drop your Excel or CSV file here
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  or <span className="text-indigo-600 dark:text-indigo-400 underline font-medium">browse from your computer</span>
-                </p>
-              </div>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-sm">
-                Supports website name, website URL, submitted URL, type, and status columns (e.g. Directory, Guest Post, Profile...)
+        {/* ═══ Scrollable Body Container ═══ */}
+        <div className="p-5 overflow-y-auto flex-1 space-y-4 pr-3.5 scrollbar-thin">
+          {/* ═══ Green Sample Template Banner ═══ */}
+          <div className="bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 dark:border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <h4 className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                Need a backlink submission template?
+              </h4>
+              <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
+                Download our pre-formatted sample Excel sheet with backlink submission columns.
               </p>
             </div>
-
-            {importFileName && previewItems.length > 0 && (
-              <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium truncate pr-2">
-                  <Check className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">
-                    <strong>{importFileName}</strong> — Ready to import{' '}
-                    <strong>{previewItems.length}</strong> backlinks.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setImportFileName('');
-                    setPreviewItems([]);
-                  }}
-                  className="text-slate-400 hover:text-red-500 text-[11px] font-semibold cursor-pointer flex-shrink-0"
-                >
-                  Remove
-                </button>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={downloadSampleExcel}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-emerald-950 dark:text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl transition shadow-sm whitespace-nowrap self-start sm:self-auto cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Sample (.xlsx)</span>
+            </button>
           </div>
-        )}
 
-        {/* ═══ Tab 2: Paste Text / CSV Rows ═══ */}
-        {importTab === 'text' && (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Paste backlink URLs one per line, or CSV rows (Website Name, Website URL, Submitted URL, Type, Status):
-            </p>
-            <textarea
-              rows={5}
-              placeholder={`https://medium.com/@dev/top-tools-2026\nhttps://quora.com/best-seo-platforms\nProduct Hunt, https://producthunt.com/posts/my-tool, ${targetSubmittedUrl}, Directory, Done`}
-              value={pastedText}
-              onChange={(e) => setPastedText(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-white resize-y"
-            />
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleParseText}
-                className="px-3.5 py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer"
+          {/* ═══ Segmented Tab Switcher ═══ */}
+          <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+            <button
+              type="button"
+              onClick={() => setImportTab('file')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
+                importTab === 'file'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+              <span>Upload Excel / CSV File</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportTab('text')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
+                importTab === 'text'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <FileText className="w-4 h-4 text-indigo-400" />
+              <span>Paste Text / CSV Rows</span>
+            </button>
+          </div>
+
+          {/* ═══ Tab 1: File Upload / Drag & Drop ═══ */}
+          {importTab === 'file' && (
+            <div className="space-y-3">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files?.[0]) {
+                    processImportFile(e.dataTransfer.files[0]);
+                  }
+                }}
+                onClick={() => document.getElementById('backlink-excel-input')?.click()}
+                className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 text-center flex flex-col items-center justify-center gap-2.5 cursor-pointer transition ${
+                  isDragging
+                    ? 'border-indigo-500 bg-indigo-500/10'
+                    : 'border-slate-300 dark:border-slate-700/80 hover:border-indigo-500/70 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/40'
+                }`}
               >
-                ⚡ Preview Parsed Items ({pastedText.split('\n').filter(Boolean).length} lines)
-              </button>
-              {previewItems.length > 0 && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                  ✓ {previewItems.length} valid links detected
-                </span>
+                <input
+                  id="backlink-excel-input"
+                  type="file"
+                  accept=".xlsx,.xls,.csv,.txt"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
+                  <UploadCloud className="w-5 h-5 text-slate-400 dark:text-slate-300" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
+                    Drag and drop your Excel or CSV file here
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    or <span className="text-indigo-600 dark:text-indigo-400 underline font-medium">browse from your computer</span>
+                  </p>
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-sm">
+                  Supports website name, website URL, submitted URL, type, and status columns (e.g. Directory, Guest Post, Profile...)
+                </p>
+              </div>
+
+              {importFileName && previewItems.length > 0 && (
+                <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium truncate pr-2">
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">
+                      <strong>{importFileName}</strong> — Ready to import{' '}
+                      <strong>{previewItems.length}</strong> backlinks.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImportFileName('');
+                      setPreviewItems([]);
+                    }}
+                    className="text-slate-400 hover:text-red-500 text-[11px] font-semibold cursor-pointer flex-shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ═══ Live Preview Table (when items are loaded) ═══ */}
-        {previewItems.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-              <span>Preview Import ({previewItems.length} backlinks ready)</span>
-              <button
-                type="button"
-                onClick={() => setPreviewItems([])}
-                className="text-[11px] text-rose-500 hover:underline cursor-pointer"
-              >
-                Clear all
-              </button>
+          {/* ═══ Tab 2: Paste Text / CSV Rows ═══ */}
+          {importTab === 'text' && (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Paste backlink URLs one per line, or CSV rows (Website Name, Website URL, Submitted URL, Type, Status):
+              </p>
+              <textarea
+                rows={4}
+                placeholder={`https://medium.com/@dev/top-tools-2026\nhttps://quora.com/best-seo-platforms\nProduct Hunt, https://producthunt.com/posts/my-tool, ${targetSubmittedUrl}, Directory, Done`}
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-white resize-y"
+              />
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleParseText}
+                  className="px-3.5 py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer"
+                >
+                  ⚡ Preview Parsed Items ({pastedText.split('\n').filter(Boolean).length} lines)
+                </button>
+                {previewItems.length > 0 && (
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                    ✓ {previewItems.length} valid links detected
+                  </span>
+                )}
+              </div>
             </div>
+          )}
 
-            <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-100 dark:bg-slate-800/80 text-[10px] uppercase text-slate-400 sticky top-0">
-                  <tr>
-                    <th className="py-2 px-3">#</th>
-                    <th className="py-2 px-3">Website</th>
-                    <th className="py-2 px-3">Website URL</th>
-                    <th className="py-2 px-3">Type</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-                  {previewItems.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-100/50 dark:hover:bg-slate-800/40">
-                      <td className="py-1.5 px-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
-                      <td className="py-1.5 px-3 font-semibold">{item.websiteName}</td>
-                      <td className="py-1.5 px-3 font-mono text-[11px] truncate max-w-[200px] text-indigo-600 dark:text-indigo-400">
-                        {item.websiteUrl}
-                      </td>
-                      <td className="py-1.5 px-3">{item.type}</td>
-                      <td className="py-1.5 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            item.status === 'Done'
-                              ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                              : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="py-1.5 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePreviewItem(idx)}
-                          className="text-slate-400 hover:text-rose-500 cursor-pointer p-1 rounded hover:bg-rose-500/10 transition"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
+          {/* ═══ Live Preview Table (when items are loaded) ═══ */}
+          {previewItems.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                <span>Preview Import ({previewItems.length} backlinks ready)</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewItems([])}
+                  className="text-[11px] text-rose-500 hover:underline cursor-pointer"
+                >
+                  Clear all
+                </button>
+              </div>
+
+              <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-100 dark:bg-slate-800/80 text-[10px] uppercase text-slate-400 sticky top-0">
+                    <tr>
+                      <th className="py-2 px-3">#</th>
+                      <th className="py-2 px-3">Website</th>
+                      <th className="py-2 px-3">Website URL</th>
+                      <th className="py-2 px-3">Type</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                    {previewItems.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-100/50 dark:hover:bg-slate-800/40">
+                        <td className="py-1.5 px-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                        <td className="py-1.5 px-3 font-semibold">{item.websiteName}</td>
+                        <td className="py-1.5 px-3 font-mono text-[11px] truncate max-w-[200px] text-indigo-600 dark:text-indigo-400">
+                          {item.websiteUrl}
+                        </td>
+                        <td className="py-1.5 px-3">{item.type}</td>
+                        <td className="py-1.5 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.status === 'Done'
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePreviewItem(idx)}
+                            className="text-slate-400 hover:text-rose-500 cursor-pointer p-1 rounded hover:bg-rose-500/10 transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ═══ Modal Footer ═══ */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+        {/* ═══ Modal Footer (Fixed bottom) ═══ */}
+        <div className="flex items-center justify-end gap-3 p-4 px-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -512,9 +525,9 @@ export function BulkImportBacklinksModal({
             type="button"
             disabled={previewItems.length === 0}
             onClick={handleCommitImport}
-            className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
+            className="px-5 py-2.5 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-[#0062ff]/25 transition-all cursor-pointer flex items-center gap-1.5"
           >
-            Import {previewItems.length} Backlinks
+            <span>Import {previewItems.length} Backlinks</span>
           </button>
         </div>
       </div>

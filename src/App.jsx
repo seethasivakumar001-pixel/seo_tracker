@@ -2,7 +2,6 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { useThemeStore } from './store/themeStore';
 import { useAuthStore } from './store/authStore';
 import { AppLayout } from './layouts/AppLayout';
 import { AuthLayout } from './layouts/AuthLayout';
@@ -20,6 +19,7 @@ const Performance = lazy(() => import('./pages/Performance').then(m => ({ defaul
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })));
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
+const Users = lazy(() => import('./pages/Users').then(m => ({ default: m.Users })));
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 const AddWebsite = lazy(() => import('./pages/AddWebsite').then(m => ({ default: m.AddWebsite })));
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
@@ -96,11 +96,13 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  const { initTheme, theme } = useThemeStore();
-
   useEffect(() => {
-    initTheme();
-  }, [initTheme]);
+    document.documentElement.classList.remove('dark');
+    try {
+      localStorage.removeItem('rankpulse_theme');
+      localStorage.removeItem('syscorp_theme');
+    } catch {}
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -134,6 +136,7 @@ export default function App() {
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/users" element={<Users />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/add-website" element={<AddWebsite />} />
               </Route>
@@ -150,13 +153,13 @@ export default function App() {
           toastOptions={{
             duration: 3500,
             style: {
-              background: theme === 'dark' ? '#111827' : '#ffffff',
-              color: theme === 'dark' ? '#f8fafc' : '#0f172a',
-              border: theme === 'dark' ? '1px solid #1f293d' : '1px solid #e2e8f0',
+              background: '#ffffff',
+              color: '#0a1629',
+              border: '1px solid #d2e3fc',
               fontSize: '12px',
               fontWeight: '600',
               borderRadius: '12px',
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)'
+              boxShadow: '0 10px 25px -5px rgba(0, 98, 255, 0.1)'
             }
           }}
         />

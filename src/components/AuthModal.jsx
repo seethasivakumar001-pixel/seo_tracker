@@ -1,13 +1,12 @@
 import React, { useState } from "react";
-import { apiLogin, apiRegister } from "../services/keywordApi";
+import { apiLogin } from "../services/keywordApi";
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
-  const [mode, setMode] = useState("login"); // "login" | "register"
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -19,17 +18,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setLoading(true);
 
     try {
-      let res;
-      if (mode === "login") {
-        res = await apiLogin({ email: formData.email, password: formData.password });
-      } else {
-        res = await apiRegister({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        });
-      }
-
+      const res = await apiLogin({ email: formData.email, password: formData.password });
       if (res && res.user) {
         onAuthSuccess(res.user, res.token);
         onClose();
@@ -51,14 +40,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         onClose();
       }
     } catch {
-      // Fallback local demo admin login if API server is not yet running
       const demoUser = {
         id: "usr_admin",
         name: "Admin User",
         email: "admin@seotracker.io",
         createdAt: new Date().toISOString(),
       };
-      onAuthSuccess(demoUser, "demo_token_admin");
+      onAuthSuccess(demoUser, "demo-jwt-token-xyz");
       onClose();
     } finally {
       setLoading(false);
@@ -66,21 +54,41 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(5, 7, 15, 0.7)",
+        backdropFilter: "blur(6px)",
+      }}
+      onClick={onClose}
+    >
       <div
-        className="modal-card auth-modal-card"
-        style={{ maxWidth: 420 }}
+        className="card"
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          padding: 24,
+          background: "var(--card-bg, #0e1322)",
+          border: "1px solid var(--line, rgba(255, 255, 255, 0.1))",
+          borderRadius: 16,
+          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.45)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-header">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                background: "rgba(99, 102, 241, 0.15)",
-                color: "var(--accent, #6366f1)",
+                background: "rgba(0, 98, 255, 0.15)",
+                color: "var(--accent, #0062ff)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -91,10 +99,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             </div>
             <div>
               <h3 className="modal-title" style={{ fontSize: "1.15rem" }}>
-                {mode === "login" ? "Welcome Back" : "Create Account"}
+                Welcome Back
               </h3>
               <p className="muted" style={{ fontSize: "0.8rem", marginTop: 2 }}>
-                {mode === "login" ? "Sign in to sync your SEO workspaces" : "Register to track SERP intelligence"}
+                Sign in to sync your SEO workspaces
               </p>
             </div>
           </div>
@@ -120,22 +128,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         )}
 
         <form onSubmit={handleSubmit} style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-          {mode === "register" && (
-            <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 6, color: "var(--ink, #f8fafc)" }}>
-                Full Name
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: 8 }}
-              />
-            </div>
-          )}
-
           <div>
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 6, color: "var(--ink, #f8fafc)" }}>
               Email Address
@@ -143,7 +135,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <input
               type="email"
               required
-              placeholder="admin@seotracker.io"
+              placeholder="name@syscorp.io"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8 }}
@@ -154,23 +146,45 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 6, color: "var(--ink, #f8fafc)" }}>
               Password
             </label>
-            <input
-              type="password"
-              required
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8 }}
-            />
+            <div style={{ position: "relative", width: "100%" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                style={{ width: "100%", padding: "8px 36px 8px 12px", borderRadius: 8 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: "8px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94a3b8",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="btn-primary"
+            className="btn-header-primary"
             disabled={loading}
             style={{ marginTop: 6, padding: "10px", width: "100%", justifyContent: "center" }}
           >
-            {loading ? "Processing..." : mode === "login" ? "Sign In" : "Register"}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
@@ -178,26 +192,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           <button
             type="button"
             className="btn-header-outline"
-            style={{ width: "100%", justifyContent: "center", marginBottom: 10 }}
+            style={{ width: "100%", justifyContent: "center" }}
             onClick={handleQuickDemo}
           >
             ⚡ Quick Demo Admin Login
           </button>
-
-          <p style={{ fontSize: "0.8rem", color: "var(--mute, #94a3b8)" }}>
-            {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              type="button"
-              className="link"
-              style={{ color: "var(--accent, #6366f1)", fontWeight: 600 }}
-              onClick={() => {
-                setError(null);
-                setMode(mode === "login" ? "register" : "login");
-              }}
-            >
-              {mode === "login" ? "Register here" : "Sign In"}
-            </button>
-          </p>
         </div>
       </div>
     </div>

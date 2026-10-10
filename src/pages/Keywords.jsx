@@ -164,16 +164,23 @@ export function Keywords() {
 
   // Active Project & Domain resolution
   const activeKeywords = useMemo(() => {
-    return keywords.filter(
-      (k) =>
-        !k.deletedAt &&
-        (!selectedWebsiteId ||
-          k.websiteId === selectedWebsiteId ||
-          k.projectId === selectedWebsiteId ||
-          (selectedWebsiteId === 'site-1' && (k.projectId === 'p1' || k.websiteId === 'site-1')) ||
-          (selectedWebsiteId === 'site-2' && (k.projectId === 'p2' || k.websiteId === 'site-2')))
-    );
-  }, [keywords, selectedWebsiteId]);
+    const currentWeb = getSelectedWebsite();
+    const currentId = selectedWebsiteId || currentWeb?.id;
+    const currentDom = currentWeb?.domain ? currentWeb.domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : '';
+
+    return keywords.filter((k) => {
+      if (k.deletedAt) return false;
+      if (!currentId) return true;
+      const kwSiteId = k.websiteId || k.projectId;
+      if (kwSiteId === currentId) return true;
+      if (currentId === 'site-1' && (k.projectId === 'p1' || k.websiteId === 'site-1')) return true;
+      if (currentId === 'site-2' && (k.projectId === 'p2' || k.websiteId === 'site-2')) return true;
+      if (currentDom && ((k.url && k.url.toLowerCase().includes(currentDom)) || (k.targetUrl && k.targetUrl.toLowerCase().includes(currentDom)))) {
+        return true;
+      }
+      return false;
+    });
+  }, [keywords, selectedWebsiteId, websites]);
 
   const trashedKeywords = useMemo(() => keywords.filter((k) => k.deletedAt), [keywords]);
   const trashedCategories = useMemo(() => categories.filter((c) => c.deletedAt), [categories]);
@@ -183,24 +190,26 @@ export function Keywords() {
     return categories.filter((c) => !c.deletedAt);
   }, [categories]);
 
-  // ═══ TOP 5 SUMMARY STATS (Image 1 & 2) ═══
+  // ═══ TOP 5 SUMMARY STATS (Dynamic calculations) ═══
   const stats = useMemo(() => {
     const total = activeKeywords.length;
-    const top3 = activeKeywords.filter((k) => k.position <= 3).length;
-    const top10 = activeKeywords.filter((k) => k.position <= 10).length;
+    const rankedKeywords = activeKeywords.filter((k) => Number(k.position) > 0 && Number(k.position) <= 100);
+    const top3 = rankedKeywords.filter((k) => Number(k.position) <= 3).length;
+    const top10 = rankedKeywords.filter((k) => Number(k.position) <= 10).length;
     const totalVolume = activeKeywords.reduce((acc, k) => acc + (Number(k.volume) || 0), 0);
     const avgPosition =
-      total > 0
-        ? (activeKeywords.reduce((acc, k) => acc + (Number(k.position) || 0), 0) / total).toFixed(1)
-        : '8.4';
+      rankedKeywords.length > 0
+        ? (rankedKeywords.reduce((acc, k) => acc + (Number(k.position) || 0), 0) / rankedKeywords.length).toFixed(1)
+        : '0';
     const avgKd =
       total > 0
         ? Math.round(activeKeywords.reduce((acc, k) => acc + (Number(k.difficulty) || 0), 0) / total)
-        : 26;
-    const avgKdInfo = getDifficultyInfo(avgKd);
+        : 0;
+    const avgKdInfo = getDifficultyInfo(avgKd || 1);
 
     return {
       total,
+      activeRanked: rankedKeywords.length,
       top3,
       top10,
       totalVolume,
@@ -609,24 +618,31 @@ export function Keywords() {
   };
 
   // Bulk Import Submit
-  const handleBulkImport = () => {
+  const handleBulkImport = async () => {
     const keywordsToImport = importTab === 'file' ? fileKeywords : textKeywords;
     if (!keywordsToImport || keywordsToImport.length === 0) {
       toast.error('No keywords to import. Please upload a file or paste keyword rows.');
       return;
     }
 
-    if (bulkAddKeywords) {
-      bulkAddKeywords(keywordsToImport);
-    } else {
-      keywordsToImport.forEach((k) => addKeyword(k));
-    }
+    try {
+      if (bulkAddKeywords) {
+        await bulkAddKeywords(keywordsToImport);
+      } else {
+        for (const k of keywordsToImport) {
+          await addKeyword(k);
+        }
+      }
 
-    toast.success(`Imported ${keywordsToImport.length} keywords successfully!`);
-    setImportText('');
-    setFileKeywords([]);
-    setImportFileName('');
-    setShowImportModal(false);
+      toast.success(`Imported ${keywordsToImport.length} keywords successfully!`);
+      setImportText('');
+      setFileKeywords([]);
+      setImportFileName('');
+      setShowImportModal(false);
+    } catch (err) {
+      console.error('Bulk import error:', err);
+      toast.error('Failed to import keywords: ' + err.message);
+    }
   };
 
   // Monthly Export to Excel
@@ -759,10 +775,10 @@ export function Keywords() {
                   </span>
                   <div className="flex items-baseline gap-2 mt-0.5">
                     <span className="text-xl font-black text-white">
-                      {stats.total > 0 ? stats.total.toLocaleString() : '24'}
+                      {stats.total.toLocaleString()}
                     </span>
-                    <span className="text-[11px] font-bold text-emerald-400">
-                      ↑ +14%
+                    <span className="text-[11px] font-bold text-slate-400">
+                      {stats.total > 0 ? `${stats.activeRanked} tracked` : '0 active'}
                     </span>
                   </div>
                 </div>
@@ -779,10 +795,10 @@ export function Keywords() {
                   </span>
                   <div className="flex items-baseline gap-2 mt-0.5">
                     <span className="text-xl font-black text-white">
-                      {stats.top3 > 0 ? stats.top3.toLocaleString() : '8'}
+                      {stats.top3.toLocaleString()}
                     </span>
                     <span className="text-[11px] font-bold text-emerald-400">
-                      ↑ +6%
+                      {stats.total > 0 ? `${Math.round((stats.top3 / stats.total) * 100)}% share` : '0%'}
                     </span>
                   </div>
                 </div>
@@ -799,10 +815,10 @@ export function Keywords() {
                   </span>
                   <div className="flex items-baseline gap-2 mt-0.5">
                     <span className="text-xl font-black text-white">
-                      #{stats.avgPosition}
+                      {stats.total > 0 && stats.activeRanked > 0 ? `#${stats.avgPosition}` : '–'}
                     </span>
-                    <span className="text-[11px] font-bold text-emerald-400">
-                      ↑ +3.2
+                    <span className="text-[11px] font-bold text-blue-400">
+                      Top 10: {stats.top10}
                     </span>
                   </div>
                 </div>
@@ -1002,17 +1018,17 @@ export function Keywords() {
       {/* ═══ 4. TAB 1: DAILY TREND VIEW (Exact Image 1) ═══ */}
       {activeTab === 'daily' && (
         <div className="space-y-4">
-          {/* Enhanced Filter Bar with Search, Difficulty pills, Rank pills & Count */}
-          <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3.5">
-            {/* Search Input */}
-            <div className="w-full xl:w-80 relative flex-shrink-0">
+          {/* Enhanced Filter Bar: Search on Top, Difficulty on Left, Rank on Right */}
+          <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-xl shadow-xs space-y-3">
+            {/* Top: Search Input */}
+            <div className="w-full relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search keywords or URLs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-9 py-2 text-xs font-medium rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 text-slate-900 dark:text-white placeholder-slate-400 transition-all"
+                className="w-full pl-10 pr-9 py-2 text-xs font-medium rounded-xl bg-slate-100/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-[#0062ff]/40 focus:border-[#0062ff] text-slate-900 dark:text-white placeholder-slate-400 transition-all"
               />
               {searchQuery && (
                 <button
@@ -1026,12 +1042,12 @@ export function Keywords() {
               )}
             </div>
 
-            {/* Filter Pills & Actions */}
-            <div className="flex flex-wrap items-center gap-3 xl:gap-4 text-xs">
-              {/* DIFFICULTY Filter */}
-              <div className="flex items-center gap-2">
+            {/* Bottom Row: Difficulty on Left, Rank on Right */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/50">
+              {/* Left: DIFFICULTY Filter */}
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex-shrink-0">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#0062ff]" />
                   Difficulty:
                 </span>
                 <div className="inline-flex items-center gap-1 bg-slate-100/90 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
@@ -1050,7 +1066,7 @@ export function Keywords() {
                         onClick={() => setDifficultyFilter(label)}
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/25 font-bold'
+                            ? 'bg-[#0062ff] text-white shadow-sm shadow-[#0062ff]/25 font-bold'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                         }`}
                       >
@@ -1062,10 +1078,10 @@ export function Keywords() {
                 </div>
               </div>
 
-              {/* RANK Filter */}
-              <div className="flex items-center gap-2">
+              {/* Right: RANK Filter & Actions */}
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex-shrink-0">
-                  <Target className="w-3.5 h-3.5 text-indigo-500" />
+                  <Target className="w-3.5 h-3.5 text-[#0062ff]" />
                   Rank:
                 </span>
                 <div className="inline-flex items-center gap-1 bg-slate-100/90 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
@@ -1078,7 +1094,7 @@ export function Keywords() {
                         onClick={() => setRankFilter(r)}
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/25 font-bold'
+                            ? 'bg-[#0062ff] text-white shadow-sm shadow-[#0062ff]/25 font-bold'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
                         }`}
                       >
@@ -1087,28 +1103,28 @@ export function Keywords() {
                     );
                   })}
                 </div>
+
+                {/* Keyword count & Reset Filter button */}
+                {(difficultyFilter !== 'All' || rankFilter !== 'All' || searchQuery) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDifficultyFilter('All');
+                      setRankFilter('All');
+                      setSearchQuery('');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold text-slate-500 hover:text-rose-500 bg-slate-100 dark:bg-slate-800/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-800 transition-all cursor-pointer"
+                    title="Reset all filters"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset
+                  </button>
+                )}
+
+                <span className="hidden 2xl:inline-flex items-center text-[11px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-800/60">
+                  {filteredDailyKeywords.length} of {keywords.length} keywords
+                </span>
               </div>
-
-              {/* Keyword count & Reset Filter button */}
-              {(difficultyFilter !== 'All' || rankFilter !== 'All' || searchQuery) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDifficultyFilter('All');
-                    setRankFilter('All');
-                    setSearchQuery('');
-                  }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold text-slate-500 hover:text-rose-500 bg-slate-100 dark:bg-slate-800/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-800 transition-all cursor-pointer"
-                  title="Reset all filters"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Reset
-                </button>
-              )}
-
-              <span className="hidden 2xl:inline-flex items-center text-[11px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-800/60">
-                {filteredDailyKeywords.length} of {keywords.length} keywords
-              </span>
             </div>
           </div>
 
@@ -1379,7 +1395,7 @@ export function Keywords() {
               <button
                 type="button"
                 onClick={exportMonthlyExcel}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-[#0062ff] hover:bg-[#004ecc] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-[#0062ff]/25 transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download Excel</span>
@@ -1388,7 +1404,7 @@ export function Keywords() {
               <button
                 type="button"
                 onClick={exportMonthlyPDF}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-[#0062ff] hover:bg-[#004ecc] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-[#0062ff]/25 transition-colors cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Download PDF</span>
@@ -1648,7 +1664,7 @@ export function Keywords() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/30"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
                   Add Keyword
                 </button>
@@ -1766,7 +1782,7 @@ export function Keywords() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/30"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
                   Save Changes
                 </button>
@@ -1860,7 +1876,7 @@ export function Keywords() {
               <button
                 type="button"
                 onClick={() => setViewingKeyword(null)}
-                className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl"
+                className="px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl cursor-pointer transition-all"
               >
                 Close
               </button>
@@ -1878,21 +1894,21 @@ export function Keywords() {
           aria-modal="true"
         >
           <div
-            className="modal-card max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150"
+            className="modal-card max-w-2xl w-full max-h-[90vh] flex flex-col p-0 overflow-hidden animate-in fade-in zoom-in-95 duration-150 bg-white text-slate-900 border border-slate-200 shadow-2xl rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="flex items-start justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+            {/* Modal Header (Fixed) */}
+            <div className="flex items-start justify-between p-5 pb-3 border-b border-slate-100 flex-shrink-0">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-base sm:text-lg">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <div className="flex items-center gap-2 font-bold text-slate-900 text-base sm:text-lg">
+                  <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
                     <FileSpreadsheet className="w-5 h-5" />
                   </div>
                   <span>Import Keywords & Monthly Comparison</span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500">
                   Target Project:{' '}
-                  <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                  <span className="text-[#0062ff] font-semibold">
                     {currentProjectDomain}
                   </span>
                 </p>
@@ -1900,159 +1916,162 @@ export function Keywords() {
               <button
                 type="button"
                 onClick={() => setShowImportModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Green Sample Template Banner */}
-            <div className="bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 dark:border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <h4 className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                  Need a template with monthly positions?
-                </h4>
-                <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400">
-                  Download our pre-formatted sample Excel sheet with 6-month ranking columns.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={downloadSampleExcel}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-emerald-950 dark:text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl transition shadow-sm whitespace-nowrap self-start sm:self-auto cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Sample (.xlsx)</span>
-              </button>
-            </div>
-
-            {/* Segmented Tab Switcher */}
-            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-              <button
-                type="button"
-                onClick={() => setImportTab('file')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
-                  importTab === 'file'
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                <span>Upload Excel / CSV File</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setImportTab('text')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
-                  importTab === 'text'
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-slate-700'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <FileText className="w-4 h-4 text-indigo-400" />
-                <span>Paste Text / CSV Rows</span>
-              </button>
-            </div>
-
-            {/* Tab 1: File Upload / Drag & Drop */}
-            {importTab === 'file' && (
-              <div className="space-y-3">
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    if (e.dataTransfer.files?.[0]) {
-                      processImportFile(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => document.getElementById('keyword-excel-input')?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3 cursor-pointer transition ${
-                    isDragging
-                      ? 'border-indigo-500 bg-indigo-500/10'
-                      : 'border-slate-300 dark:border-slate-700/80 hover:border-indigo-500/70 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/40'
-                  }`}
-                >
-                  <input
-                    id="keyword-excel-input"
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
-                    <UploadCloud className="w-6 h-6 text-slate-400 dark:text-slate-300" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
-                      Drag and drop your Excel or CSV file here
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      or <span className="text-indigo-600 dark:text-indigo-400 underline font-medium">browse from your computer</span>
-                    </p>
-                  </div>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-sm">
-                    Supports keyword columns & monthly ranking columns (e.g. {months.map(monthLabel).slice(0, 3).join(', ')}...)
+            {/* Modal Body (Scrollable) */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-4 pr-3.5 scrollbar-thin">
+              {/* Green Sample Template Banner */}
+              <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <h4 className="text-xs sm:text-sm font-bold text-emerald-900">
+                    Need a template with monthly positions?
+                  </h4>
+                  <p className="text-[11px] sm:text-xs text-emerald-700">
+                    Download our pre-formatted sample Excel sheet with 6-month ranking columns.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={downloadSampleExcel}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-xs whitespace-nowrap self-start sm:self-auto cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Sample (.xlsx)</span>
+                </button>
+              </div>
 
-                {importFileName && fileKeywords.length > 0 && (
-                  <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs">
-                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
-                      <Check className="w-4 h-4" />
-                      <span>
-                        <strong>{importFileName}</strong> — Ready to import{' '}
-                        <strong>{fileKeywords.length}</strong> keywords with monthly rankings.
-                      </span>
+              {/* Segmented Tab Switcher */}
+              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setImportTab('file')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
+                    importTab === 'file'
+                      ? 'bg-white text-[#0062ff] shadow-xs border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span>Upload Excel / CSV File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImportTab('text')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold transition cursor-pointer ${
+                    importTab === 'text'
+                      ? 'bg-white text-[#0062ff] shadow-xs border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 text-[#0062ff]" />
+                  <span>Paste Text / CSV Rows</span>
+                </button>
+              </div>
+
+              {/* Tab 1: File Upload / Drag & Drop */}
+              {importTab === 'file' && (
+                <div className="space-y-3">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      if (e.dataTransfer.files?.[0]) {
+                        processImportFile(e.dataTransfer.files[0]);
+                      }
+                    }}
+                    onClick={() => document.getElementById('keyword-excel-input')?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 text-center flex flex-col items-center justify-center gap-2.5 cursor-pointer transition ${
+                      isDragging
+                        ? 'border-[#0062ff] bg-blue-50/50'
+                        : 'border-slate-300 hover:border-[#0062ff] bg-slate-50/70 hover:bg-blue-50/30'
+                    }`}
+                  >
+                    <input
+                      id="keyword-excel-input"
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center text-[#0062ff]">
+                      <UploadCloud className="w-5 h-5 text-[#0062ff]" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImportFileName('');
-                        setFileKeywords([]);
-                      }}
-                      className="text-slate-400 hover:text-red-500 text-[11px] font-semibold cursor-pointer"
-                    >
-                      Remove
-                    </button>
+                    <div className="space-y-0.5">
+                      <p className="text-xs sm:text-sm font-semibold text-slate-900">
+                        Drag and drop your Excel or CSV file here
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        or <span className="text-[#0062ff] underline font-medium">browse from your computer</span>
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-slate-400 max-w-sm">
+                      Supports keyword columns & monthly ranking columns (e.g. {months.map(monthLabel).slice(0, 3).join(', ')}...)
+                    </p>
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Tab 2: Paste Text / CSV Rows */}
-            {importTab === 'text' && (
-              <div className="space-y-2">
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Paste keywords one per line, optionally with position, volume, and category separated by commas or tabs:
-                </p>
-                <textarea
-                  rows={6}
-                  placeholder={`react tutorials, 3, 14000, 35, Blog\nseo ranking tool, 5, 8200, 42, Features\nnextjs speed optimization, 12, 5400, 60, Guides`}
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white resize-none"
-                />
-                {textKeywords.length > 0 && (
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5" />
-                    Detected {textKeywords.length} valid keyword lines
+                  {importFileName && fileKeywords.length > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
+                      <div className="flex items-center gap-2 text-emerald-800 font-medium">
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        <span>
+                          <strong>{importFileName}</strong> — Ready to import{' '}
+                          <strong>{fileKeywords.length}</strong> keywords with monthly rankings.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImportFileName('');
+                          setFileKeywords([]);
+                        }}
+                        className="text-slate-400 hover:text-red-500 text-[11px] font-semibold cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 2: Paste Text / CSV Rows */}
+              {importTab === 'text' && (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-600">
+                    Paste keywords one per line, optionally with position, volume, and category separated by commas or tabs:
                   </p>
-                )}
-              </div>
-            )}
+                  <textarea
+                    rows={5}
+                    placeholder={`react tutorials, 3, 14000, 35, Blog\nseo ranking tool, 5, 8200, 42, Features\nnextjs speed optimization, 12, 5400, 60, Guides`}
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0062ff] text-slate-900 resize-none"
+                  />
+                  {textKeywords.length > 0 && (
+                    <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      Detected {textKeywords.length} valid keyword lines
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            {/* Modal Footer (Fixed) */}
+            <div className="flex items-center justify-end gap-3 p-4 px-6 border-t border-slate-100 bg-slate-50/80 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -2062,8 +2081,8 @@ export function Keywords() {
                 disabled={activeParsedCount === 0}
                 className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer ${
                   activeParsedCount > 0
-                    ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/30'
-                    : 'bg-indigo-600/50 opacity-60 cursor-not-allowed'
+                    ? 'bg-[#0062ff] hover:bg-[#004ecc] shadow-[#0062ff]/30'
+                    : 'bg-[#0062ff]/50 opacity-60 cursor-not-allowed'
                 }`}
               >
                 <span>Import {activeParsedCount} Keywords</span>

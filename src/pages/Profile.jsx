@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, KeyRound, ShieldCheck, Save, Camera, Check } from 'lucide-react';
+import { User, KeyRound, Save, Camera, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/Card';
 import { Badge } from '../components/Badge';
@@ -16,13 +16,15 @@ export function Profile() {
     avatar: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
   });
 
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
@@ -147,7 +149,7 @@ export function Profile() {
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Update Profile</span>
@@ -159,7 +161,7 @@ export function Profile() {
       </div>
 
       {/* Password & Security Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="max-w-xl">
         {/* Change Password Card */}
         <Card>
           <CardHeader>
@@ -175,92 +177,81 @@ export function Profile() {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Current Password
                 </label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
-                />
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full pl-3 pr-9 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+                    aria-label="Toggle Current Password Visibility"
+                  >
+                    {showCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   New Password
                 </label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full pl-3 pr-9 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+                    aria-label="Toggle New Password Visibility"
+                  >
+                    {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Confirm New Password
                 </label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full pl-3 pr-9 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+                    aria-label="Toggle Confirm Password Visibility"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#0062ff] hover:bg-[#004ecc] rounded-xl shadow-md shadow-[#0062ff]/25 cursor-pointer transition-all"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Update Password</span>
                 </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* 2FA Security Card */}
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Two-Factor Authentication (2FA)</CardTitle>
-              <CardDescription>Extra security layer for your enterprise rank data</CardDescription>
-            </div>
-            <ShieldCheck className="w-5 h-5 text-emerald-500" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Check className="w-5 h-5 text-emerald-600" />
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    Authenticator App Enabled
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Google Authenticator / 1Password active
-                  </p>
-                </div>
-              </div>
-              <Badge variant="success">Active</Badge>
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Two-factor authentication adds an additional layer of security by requiring more than just a password to sign in.
-            </p>
-
-            <div className="pt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => toast.success('2FA configuration refreshed')}
-                className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                Re-configure 2FA
-              </button>
-            </div>
           </CardContent>
         </Card>
       </div>
