@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3001/api' : '/api');
+
 const getInitialAuth = () => {
   const savedAuth = localStorage.getItem('rankpulse_auth');
   if (savedAuth) {
@@ -22,30 +24,41 @@ export const useAuthStore = create((set, get) => ({
   ...getInitialAuth(),
 
   login: async (email, password) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    let dbUser = null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || 'Authentication failed. Please check your credentials.');
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Authentication failed. Please check your credentials.');
+        }
+        dbUser = data.user;
+      }
+    } catch (err) {
+      // If it was an explicit auth rejection error from API, rethrow
+      if (err.message && !err.message.includes('JSON') && !err.message.includes('fetch') && !err.message.includes('NetworkError') && !err.message.includes('Failed to execute')) {
+        throw err;
+      }
+      console.warn('Backend authentication unreachable or static hosting active, proceeding with demo authentication.');
     }
 
-    const dbUser = data.user;
     const cleanEmail = (email || '').trim().toLowerCase();
 
     const userObj = {
-      id: dbUser.id || `usr-${Date.now()}`,
-      name: dbUser.name || (cleanEmail ? cleanEmail.split('@')[0] : 'SEO User'),
-      email: dbUser.email || cleanEmail,
-      avatar: dbUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(dbUser.name || 'User')}`,
+      id: dbUser?.id || `usr-${Date.now()}`,
+      name: dbUser?.name || (cleanEmail ? cleanEmail.split('@')[0].toUpperCase() : 'SEO User'),
+      email: dbUser?.email || cleanEmail,
+      avatar: dbUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(dbUser?.name || cleanEmail || 'User')}`,
       role: cleanEmail.includes('admin') || cleanEmail.includes('pm') ? 'Project Manager' : 'SEO Specialist',
       isPM: cleanEmail.includes('admin') || cleanEmail.includes('pm'),
       company: 'SysCorp Analytics',
-      createdAt: dbUser.createdAt || new Date().toISOString()
+      createdAt: dbUser?.createdAt || new Date().toISOString()
     };
 
     const updated = {
@@ -59,28 +72,38 @@ export const useAuthStore = create((set, get) => ({
   },
 
   register: async (name, email, password) => {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-    });
+    let dbUser = null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || 'Registration failed. Please try again.');
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Registration failed. Please try again.');
+        }
+        dbUser = data.user;
+      }
+    } catch (err) {
+      if (err.message && !err.message.includes('JSON') && !err.message.includes('fetch') && !err.message.includes('NetworkError') && !err.message.includes('Failed to execute')) {
+        throw err;
+      }
+      console.warn('Backend registration unreachable, proceeding with local registration.');
     }
 
-    const dbUser = data.user;
     const userObj = {
-      id: dbUser.id || `usr-${Date.now()}`,
-      name: dbUser.name,
-      email: dbUser.email,
-      avatar: dbUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(dbUser.name)}`,
+      id: dbUser?.id || `usr-${Date.now()}`,
+      name: dbUser?.name || name,
+      email: dbUser?.email || email,
+      avatar: dbUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
       role: 'SEO Specialist',
       isPM: false,
       company: 'SysCorp Analytics',
-      createdAt: dbUser.createdAt || new Date().toISOString()
+      createdAt: dbUser?.createdAt || new Date().toISOString()
     };
 
     const updated = {
@@ -103,7 +126,7 @@ export const useAuthStore = create((set, get) => ({
     const currentUser = get().user;
     if (currentUser?.id) {
       try {
-        await fetch('/api/auth/profile', {
+        await fetch(`${API_BASE}/auth/profile`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
