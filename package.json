@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "node backend/src/server.js",
     "dev": "vite",
     "server": "node backend/src/server.js",
     "backend": "node --watch backend/src/server.js",
