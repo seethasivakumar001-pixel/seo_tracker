@@ -265,8 +265,7 @@ export const seoApi = {
 
     // 1. Try backend crawler endpoint if server is active
     try {
-      const apiHost = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : "http://localhost:3001";
-      const backendRes = await fetch(`${apiHost}/api/pagespeed/crawl?url=${encodeURIComponent(formattedUrl)}`, {
+      const backendRes = await fetch(`http://localhost:3001/api/pagespeed/crawl?url=${encodeURIComponent(formattedUrl)}`, {
         signal: AbortSignal.timeout(3000)
       });
       if (backendRes.ok) {

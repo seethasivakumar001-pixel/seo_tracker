@@ -95,11 +95,10 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     const { type } = await getDb();
-    const host = "0.0.0.0";
-    app.listen(PORT, host, () => {
-      console.log(`🚀 SEO Tracker Backend running at: http://${host}:${PORT}`);
+    app.listen(PORT, () => {
+      console.log(`🚀 SEO Tracker Backend running at: http://localhost:${PORT}`);
       console.log(`📊 Connected Database: ${type.toUpperCase()}`);
-      console.log(`🔍 Health Check: http://${host}:${PORT}/api/health`);
+      console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
     });
   } catch (err) {
     console.error("Failed to start backend server:", err);
