@@ -1,0 +1,645 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    color-scheme: light !important;
+    --font-sans: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-heading: 'Outfit', 'Plus Jakarta Sans', 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    /* SysCorp High-Contrast Light Theme Palette - Ultra Clear & Legible */
+    --color-bg-main: #ffffff;
+    --color-bg-card: #ffffff;
+    --color-bg-card-hover: #f8faff;
+    --color-bg-subtle: #f0f6ff;
+    --color-border: #cbd5e1;
+    --color-border-subtle: #e2e8f0;
+    
+    --color-text-primary: #091322;
+    --color-text-secondary: #1e293b;
+    --color-text-muted: #475569;
+    
+    --color-brand: #0062ff;
+    --color-brand-hover: #004ecc;
+    --color-brand-light: #eff6ff;
+
+    --color-success: #059669;
+    --color-warning: #d97706;
+    --color-danger: #e11d48;
+    --color-info: #0284c7;
+  }
+
+  html {
+    font-size: 15px; /* Global scale boost for clear readability */
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #ffffff;
+    color: var(--color-text-primary);
+    font-size: 0.9375rem; /* ~14.5px-15px */
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+    font-weight: 700;
+  }
+
+  /* Enhanced High-Contrast Global Utility Overrides */
+  .text-slate-400 {
+    color: #64748b !important; /* Enhanced from washed-out #94a3b8 */
+  }
+  .text-slate-500 {
+    color: #475569 !important; /* Enhanced from #64748b */
+  }
+  .text-slate-600 {
+    color: #334155 !important;
+  }
+  .text-slate-700 {
+    color: #1e293b !important;
+  }
+  .text-slate-800 {
+    color: #0f172a !important;
+  }
+  .text-slate-900 {
+    color: #020617 !important;
+  }
+
+  /* Micro-text font size accessibility scaling */
+  .text-\[9px\] {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+  .text-\[10px\] {
+    font-size: 11.5px !important;
+    line-height: 1.3 !important;
+  }
+  .text-\[11px\] {
+    font-size: 12.5px !important;
+    line-height: 1.35 !important;
+  }
+  .text-xs {
+    font-size: 0.84rem !important; /* ~13px */
+    line-height: 1.4 !important;
+  }
+  .text-sm {
+    font-size: 0.95rem !important; /* ~14.5px */
+    line-height: 1.5 !important;
+  }
+
+  /* High contrast table styling */
+  th {
+    color: #334155 !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+    letter-spacing: 0.04em !important;
+  }
+  td {
+    color: #0f172a !important;
+    font-size: 13.5px !important;
+  }
+
+  /* Clear form controls */
+  input, select, textarea {
+    color: #091322 !important;
+    font-size: 13.5px !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: #64748b !important;
+  }
+
+  /* SysCorp Brand Button Theme Overrides */
+  .bg-indigo-600, .bg-indigo-500 {
+    background-color: #0062ff !important;
+  }
+  .hover\:bg-indigo-500:hover, .hover\:bg-indigo-700:hover, .hover\:bg-indigo-600:hover {
+    background-color: #004ecc !important;
+  }
+  .shadow-indigo-600\/20, .shadow-indigo-600\/25, .shadow-indigo-600\/30, .shadow-indigo-500\/20 {
+    --tw-shadow-color: rgba(0, 98, 255, 0.3) !important;
+  }
+}
+
+/* Background Gradients & Ambient Glow */
+.bg-mesh-dark,
+.bg-mesh-light {
+  background-color: #ffffff;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(0, 98, 255, 0.03) 0px, transparent 55%),
+    radial-gradient(at 100% 0%, rgba(0, 210, 255, 0.03) 0px, transparent 50%);
+}
+
+/* Custom Glassmorphism Panels */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark .glass-panel {
+  background: rgba(9, 24, 56, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Glow Card Reflection */
+.glow-card {
+  position: relative;
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 98, 255, 0.5), transparent);
+  pointer-events: none;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Custom Focus Ring */
+*:focus-visible {
+  outline: 2px solid #0062ff;
+  outline-offset: 2px;
+}
+
+/* ========================================================
+   KEYWORD TRACKER & TRASH PANEL SYSTEM STYLES
+   ======================================================== */
+:root {
+  --kd-easy: #10b981;
+  --kd-easy-bg: rgba(16, 185, 129, 0.12);
+  --kd-easy-text: #34d399;
+  --kd-easy-border: rgba(16, 185, 129, 0.3);
+
+  --kd-med: #0062ff;
+  --kd-med-bg: rgba(0, 98, 255, 0.12);
+  --kd-med-text: #38bdf8;
+  --kd-med-border: rgba(0, 98, 255, 0.3);
+
+  --kd-hard: #f59e0b;
+  --kd-hard-bg: rgba(245, 158, 11, 0.12);
+  --kd-hard-text: #fbbf24;
+  --kd-hard-border: rgba(245, 158, 11, 0.3);
+
+  --kd-vhard: #ef4444;
+  --kd-vhard-bg: rgba(239, 68, 68, 0.12);
+  --kd-vhard-text: #f87171;
+  --kd-vhard-border: rgba(239, 68, 68, 0.3);
+
+  --accent: #0062ff;
+  --accent-hover: #004ecc;
+  --up: #10b981;
+  --down: #f43f5e;
+  --mute: #94a3b8;
+  --ink: #f8fafc;
+  --panel: rgba(9, 24, 56, 0.85);
+  --panel-subtle: rgba(9, 24, 56, 0.5);
+  --line: rgba(255, 255, 255, 0.08);
+}
+
+/* Modal Overlay & Card */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal-card {
+  background: #ffffff;
+  color: #0a1629;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0a1629;
+}
+
+/* Header Action Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0062ff;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 98, 255, 0.3);
+}
+
+.btn-primary:hover {
+  background: #004ecc;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 98, 255, 0.45);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f43f5e;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-danger:hover {
+  background: #e11d48;
+}
+
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dark .btn-cancel {
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.btn-cancel:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+
+.dark .btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+}
+
+.btn-header-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 7px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dark .btn-header-outline {
+  background: rgba(0, 98, 255, 0.08);
+  border: 1px solid rgba(0, 98, 255, 0.25);
+  color: #f8fafc;
+}
+
+.btn-header-outline:hover {
+  background: rgba(15, 23, 42, 0.08);
+  border-color: rgba(15, 23, 42, 0.2);
+}
+
+.dark .btn-header-outline:hover {
+  background: rgba(0, 98, 255, 0.18);
+  border-color: rgba(0, 98, 255, 0.4);
+  color: #ffffff;
+}
+
+.btn-header-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dark .btn-header-ghost {
+  color: #94a3b8;
+}
+
+.btn-header-ghost:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+
+.dark .btn-header-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+/* Category Filter Chips */
+.category-chip {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.category-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.category-chip.active {
+  background: rgba(0, 98, 255, 0.15);
+  border-color: rgba(0, 98, 255, 0.4);
+  color: #38bdf8;
+}
+
+/* Tabs */
+.tabs .tab-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabs .tab-btn:hover {
+  color: #f8fafc;
+}
+
+.tabs .tab-btn.active {
+  background: rgba(0, 98, 255, 0.18);
+  color: #38bdf8;
+}
+
+/* Trash Panel & Table */
+.trash-badge {
+  background: #f43f5e;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.trash-restore-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.trash-restore-btn:hover {
+  background: #10b981;
+  color: #0b0f19;
+}
+
+.trash-delete-forever-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.trash-delete-forever-btn:hover {
+  background: #f43f5e;
+  color: #ffffff;
+}
+
+/* Undo Toast */
+.undo-toast {
+  background: #091838;
+  border: 1px solid rgba(0, 98, 255, 0.3);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  padding: 12px 16px 16px;
+  animation: slideUpToast 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.undo-btn {
+  background: #0062ff;
+  color: #ffffff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.undo-btn:hover {
+  background: #004ecc;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUpToast {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Universal Select & Option High-Contrast Dark/Light Rules */
+select {
+  color-scheme: light dark;
+}
+
+.dark select {
+  color-scheme: dark !important;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+:root:not(.dark) select {
+  color-scheme: light !important;
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 8px 12px;
+}
+
+:root:not(.dark) select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.dark select option:checked,
+.dark select option:hover {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+/* Universal Date Input & Calendar Picker Icon High-Contrast Styling */
+input[type="date"] {
+  color-scheme: light dark;
+}
+
+.dark input[type="date"],
+[data-theme="dark"] input[type="date"],
+html.dark input[type="date"] {
+  color-scheme: dark !important;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.5) drop-shadow(0 0 1px rgba(255, 255, 255, 0.5));
+  opacity: 0.95;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: invert(1) brightness(1.9) drop-shadow(0 0 4px rgba(129, 140, 248, 0.9));
+}
+
+/* Custom Sleek Scrollbar for independent scroll panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
+
+
+

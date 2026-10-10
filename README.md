@@ -168,23 +168,56 @@ seo-tracker/
 
 ## ⚡ Quick Start & Setup
 
-### 1. Install Dependencies
-```bash
-npm install
+### Project Architecture
+
+```
+seo-tracker/
+├── frontend/             # Dedicated React 18 + Vite Frontend
+│   ├── src/              # UI components, pages, stores, api services
+│   ├── public/           # Static assets & icons
+│   ├── package.json      # Frontend dependencies
+│   ├── vite.config.js    # Vite configuration & proxy
+│   └── .env              # VITE_API_URL configuration
+│
+├── backend/              # Dedicated Node.js + Express Backend API
+│   ├── src/              # Express server, routes, controllers, DB models
+│   ├── data/             # SQLite local database (`seo_tracker.sqlite`)
+│   ├── package.json      # Backend dependencies (Express, CORS, SQLite, etc.)
+│   └── .env              # Backend PORT & DB configuration
+│
+└── package.json          # Root orchestration scripts
 ```
 
-### 2. Start Development Server
+### 1. Quick Start (Run Both Frontend & Backend Together)
 ```bash
+# Install dependencies in both folders
+npm run install:all
+
+# Start both backend (port 3001) and frontend (port 5173) concurrently
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+### 2. Running Individually
+- **Frontend only**:
+  ```bash
+  cd frontend
+  npm install
+  npm run dev
+  ```
+- **Backend only**:
+  ```bash
+  cd backend
+  npm install
+  npm run dev
+  ```
 
-### 3. Build for Production
-```bash
-npm run build
-npm run preview
-```
+### 3. Build & Deploy
+- **Build Frontend**:
+  ```bash
+  cd frontend
+  npm run build
+  ```
+- Set `VITE_API_URL=https://your-backend-api.com/api` in your frontend environment variables when deploying to Vercel/Netlify.
 
 ---
 
