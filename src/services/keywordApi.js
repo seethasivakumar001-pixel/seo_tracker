@@ -17,7 +17,12 @@ export async function apiLogin({ email, password }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  const data = await res.json();
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = { error: `Server returned status ${res.status}` };
+  }
   if (!res.ok) {
     throw new Error(data.error || "Failed to login");
   }
@@ -30,7 +35,12 @@ export async function apiRegister({ name, email, password }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
   });
-  const data = await res.json();
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = { error: `Server returned status ${res.status}` };
+  }
   if (!res.ok) {
     throw new Error(data.error || "Failed to register");
   }

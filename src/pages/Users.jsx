@@ -42,8 +42,15 @@ export function Users() {
     setIsLoading(true);
     try {
       const res = await fetch('/api/auth/users');
-      if (!res.ok) throw new Error('Failed to load users from database');
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(`Server error (${res.status}): Failed to load users`);
+      }
+      let data = [];
+      try {
+        data = await res.json();
+      } catch {
+        data = [];
+      }
       setUsersList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Fetch users error:', err);
@@ -76,10 +83,15 @@ export function Users() {
         })
       });
 
-      const result = await res.json();
+      let result = {};
+      try {
+        result = await res.json();
+      } catch {
+        result = { error: `Server returned status ${res.status}` };
+      }
 
       if (!res.ok) {
-        throw new Error(result.error || 'Failed to create user');
+        throw new Error(result.error || `Failed to create user (${res.status})`);
       }
 
       toast.success(`User ${data.name} created successfully!`);

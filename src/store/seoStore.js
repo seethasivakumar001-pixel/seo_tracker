@@ -57,11 +57,23 @@ const getInitialCategories = () => {
   return initialCategories;
 };
 
+const getInitialSelectedWebsiteId = () => {
+  try {
+    const saved = localStorage.getItem("seo_selected_website_id") || localStorage.getItem("rankpulse_selected_website_id");
+    const sites = getInitialWebsites();
+    if (saved && sites.some((w) => w.id === saved)) return saved;
+    if (sites[0]?.id) return sites[0].id;
+  } catch (e) {
+    console.error("Error loading selected website from localStorage", e);
+  }
+  return "site-1";
+};
+
 export const useSEOStore = create((set, get) => ({
   websites: getInitialWebsites(),
-  selectedWebsiteId: getInitialWebsites()[0]?.id || "site-1",
+  selectedWebsiteId: getInitialSelectedWebsiteId(),
   projects: getInitialProjects(),
-  activeProjectId: "p1",
+  activeProjectId: getInitialSelectedWebsiteId(),
   categories: getInitialCategories(),
   keywords: getInitialKeywords(),
   dbStatus: { connected: false, database: null },
@@ -186,9 +198,23 @@ export const useSEOStore = create((set, get) => ({
             localStorage.setItem("rankpulse_websites", JSON.stringify(loadedWebsites));
           }
 
+          // Preserve currently selected project if it exists in the loaded list
+          const currentSelected = get().selectedWebsiteId || localStorage.getItem("seo_selected_website_id") || localStorage.getItem("rankpulse_selected_website_id");
+          const preservedSelectedId = loadedWebsites.some((w) => w.id === currentSelected)
+            ? currentSelected
+            : (loadedWebsites[0]?.id || currentSelected || "site-1");
+
+          try {
+            if (preservedSelectedId) {
+              localStorage.setItem("seo_selected_website_id", preservedSelectedId);
+              localStorage.setItem("rankpulse_selected_website_id", preservedSelectedId);
+            }
+          } catch {}
+
           set({
             websites: loadedWebsites.length > 0 ? loadedWebsites : get().websites,
-            selectedWebsiteId: loadedWebsites[0]?.id || get().selectedWebsiteId,
+            selectedWebsiteId: preservedSelectedId,
+            activeProjectId: preservedSelectedId,
             projects: data.projects?.length ? data.projects : get().projects,
             categories: data.categories?.length ? data.categories : get().categories,
             keywords: normalizedKeywords,
@@ -200,10 +226,22 @@ export const useSEOStore = create((set, get) => ({
     }
   },
 
-  setActiveProjectId: (id) => set({ activeProjectId: id }),
+  setActiveProjectId: (id) => {
+    try {
+      localStorage.setItem("seo_selected_website_id", id);
+      localStorage.setItem("rankpulse_selected_website_id", id);
+    } catch {}
+    set({ activeProjectId: id, selectedWebsiteId: id });
+  },
 
   // Website Actions
-  setSelectedWebsiteId: (id) => set({ selectedWebsiteId: id, activeProjectId: id }),
+  setSelectedWebsiteId: (id) => {
+    try {
+      localStorage.setItem("seo_selected_website_id", id);
+      localStorage.setItem("rankpulse_selected_website_id", id);
+    } catch {}
+    set({ selectedWebsiteId: id, activeProjectId: id });
+  },
 
   getSelectedWebsite: () => {
     const { websites, selectedWebsiteId } = get();

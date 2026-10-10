@@ -30,19 +30,35 @@ export function OnPageSEO() {
   const { getSelectedWebsite } = useSEOStore();
   const currentWebsite = getSelectedWebsite();
 
-  const [targetUrl, setTargetUrl] = useState(`https://${currentWebsite?.domain || 'my99exch.ai'}/products/seo-suite`);
-  const [targetKeyword, setTargetKeyword] = useState('enterprise cloud data platform');
+  const activeDomain = currentWebsite?.domain || 'my99exch.ai';
+  const activeBrand = currentWebsite?.projectName || activeDomain.replace(/\.[a-z]+$/i, '');
+
+  const [targetUrl, setTargetUrl] = useState(`https://${activeDomain}/products/seo-suite`);
+  const [targetKeyword, setTargetKeyword] = useState(`${activeBrand} platform`);
 
   // Live editable SERP Preview Fields
-  const [liveTitle, setLiveTitle] = useState('TechSphere Enterprise Cloud Data Architecture & Streaming Platform');
-  const [liveDescription, setLiveDescription] = useState('Build, transform, and sync sub-second data pipelines across multi-cloud environments. Scale your enterprise data platform with TechSphere.');
+  const [liveTitle, setLiveTitle] = useState(`${activeBrand} Enterprise Cloud Architecture & Optimization Platform`);
+  const [liveDescription, setLiveDescription] = useState(`Build, transform, and sync sub-second performance pipelines. Scale your platform with ${activeBrand}.`);
 
   // BeautifulSoup HTML Optimizer Tool State
-  const [rawHtml, setRawHtml] = useState(`<p>Read more on <a href="https://example.com">our guide</a> and explore <a href="https://my99exch.ai">my99exch.ai</a>.</p>`);
+  const [rawHtml, setRawHtml] = useState(`<p>Read more on <a href="https://${activeDomain}/guide">our guide</a> and explore <a href="https://${activeDomain}">${activeDomain}</a>.</p>`);
   const [linkStyle, setLinkStyle] = useState('text-decoration: none; color: #2563eb; background-color: rgba(37, 99, 235, 0.12); padding: 0 4px; border-radius: 4px;');
   const [includeOgTags, setIncludeOgTags] = useState(true);
   const [optimizerTab, setOptimizerTab] = useState('preview'); // 'preview' | 'html' | 'python'
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Synchronize fields when selected website changes
+  React.useEffect(() => {
+    if (currentWebsite?.domain) {
+      const dom = currentWebsite.domain;
+      const brand = currentWebsite.projectName || dom.replace(/\.[a-z]+$/i, '');
+      setTargetUrl(`https://${dom}/products/seo-suite`);
+      setTargetKeyword(`${brand} platform`);
+      setLiveTitle(`${brand} Enterprise Cloud Architecture & Optimization Platform`);
+      setLiveDescription(`Build, transform, and sync sub-second performance pipelines. Scale your platform with ${brand}.`);
+      setRawHtml(`<p>Read more on <a href="https://${dom}/guide">our guide</a> and explore <a href="https://${dom}">${dom}</a>.</p>`);
+    }
+  }, [currentWebsite?.id, currentWebsite?.domain, currentWebsite?.projectName]);
 
   const {
     data: analysisData,
@@ -486,9 +502,9 @@ print(soup.prettify())`;
           </div>
 
           {/* Tab Content Box */}
-          <div className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-950 p-4 font-mono text-xs overflow-hidden shadow-inner">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-slate-400">
-              <span className="text-[11px] uppercase tracking-wider font-bold">
+          <div className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 p-4 font-mono text-xs overflow-hidden shadow-xs">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300 font-sans">
                 {optimizerTab === 'preview' && 'Rendered Visual Preview (Styled Anchors)'}
                 {optimizerTab === 'html' && 'Formatted HTML Output'}
                 {optimizerTab === 'python' && 'Executable Python BeautifulSoup Script (bs4)'}
@@ -497,16 +513,16 @@ print(soup.prettify())`;
               <button
                 type="button"
                 onClick={() => handleCopyCode(optimizerTab === 'python' ? pythonBs4Snippet : generatedHtml)}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs font-sans"
               >
                 {copiedCode ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">Copied</span>
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-emerald-500">Copied</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
                     <span>Copy Code</span>
                   </>
                 )}
@@ -514,12 +530,13 @@ print(soup.prettify())`;
             </div>
 
             {optimizerTab === 'preview' && (
-              <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm font-sans space-y-3">
-                <div className="text-xs text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2 flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm font-sans space-y-3 shadow-xs">
+                <div className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center justify-between">
                   <span>&lt;title&gt;: <strong className="text-slate-800 dark:text-slate-200">{liveTitle}</strong></span>
-                  <span className="text-indigo-500 font-mono text-[11px]">Styles Applied</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-mono text-[11px] font-semibold">Styles Applied</span>
                 </div>
                 <div
+                  className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed"
                   dangerouslySetInnerHTML={{
                     __html: rawHtml.replace(/<a\s+([^>]*?)href="([^"]*)"([^>]*)>/gi, `<a $1href="$2"$3 style="${linkStyle}">`)
                   }}
@@ -528,15 +545,19 @@ print(soup.prettify())`;
             )}
 
             {optimizerTab === 'html' && (
-              <pre className="text-slate-200 whitespace-pre-wrap overflow-x-auto max-h-80 leading-relaxed">
-                {generatedHtml}
-              </pre>
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                <pre className="text-slate-200 whitespace-pre-wrap overflow-x-auto max-h-80 leading-relaxed font-mono">
+                  {generatedHtml}
+                </pre>
+              </div>
             )}
 
             {optimizerTab === 'python' && (
-              <pre className="text-indigo-300 whitespace-pre-wrap overflow-x-auto max-h-80 leading-relaxed">
-                {pythonBs4Snippet}
-              </pre>
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                <pre className="text-indigo-300 whitespace-pre-wrap overflow-x-auto max-h-80 leading-relaxed font-mono">
+                  {pythonBs4Snippet}
+                </pre>
+              </div>
             )}
           </div>
         </CardContent>
