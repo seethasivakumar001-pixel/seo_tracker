@@ -20,7 +20,6 @@ import {
   Layers,
   ArrowUpRight,
   ArrowDownRight,
-  RotateCcw,
   UploadCloud,
   Upload,
   LogIn,
@@ -773,12 +772,9 @@ export function Keywords() {
                   <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Total Keywords
                   </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
+                  <div className="mt-0.5">
                     <span className="text-xl font-black text-white">
                       {stats.total.toLocaleString()}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-400">
-                      {stats.total > 0 ? `${stats.activeRanked} tracked` : '0 active'}
                     </span>
                   </div>
                 </div>
@@ -793,12 +789,9 @@ export function Keywords() {
                   <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Top 3 Ranks
                   </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
+                  <div className="mt-0.5">
                     <span className="text-xl font-black text-white">
                       {stats.top3.toLocaleString()}
-                    </span>
-                    <span className="text-[11px] font-bold text-emerald-400">
-                      {stats.total > 0 ? `${Math.round((stats.top3 / stats.total) * 100)}% share` : '0%'}
                     </span>
                   </div>
                 </div>
@@ -813,12 +806,9 @@ export function Keywords() {
                   <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Avg Position
                   </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
+                  <div className="mt-0.5">
                     <span className="text-xl font-black text-white">
                       {stats.total > 0 && stats.activeRanked > 0 ? `#${stats.avgPosition}` : '–'}
-                    </span>
-                    <span className="text-[11px] font-bold text-blue-400">
-                      Top 10: {stats.top10}
                     </span>
                   </div>
                 </div>
@@ -1051,31 +1041,24 @@ export function Keywords() {
                   Difficulty:
                 </span>
                 <div className="inline-flex items-center gap-1 bg-slate-100/90 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
-                  {[
-                    { label: 'All', dot: null },
-                    { label: 'Easy', dot: 'bg-emerald-500' },
-                    { label: 'Medium', dot: 'bg-amber-500' },
-                    { label: 'Hard', dot: 'bg-orange-500' },
-                    { label: 'Very Hard', dot: 'bg-rose-500' }
-                  ].map(({ label, dot }) => {
-                    const isSelected = difficultyFilter === label;
-                    return (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => setDifficultyFilter(label)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#0062ff] text-white shadow-sm shadow-[#0062ff]/25 font-bold'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
-                        }`}
-                      >
-                        {dot && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : dot}`} />}
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
+                  {['All', 'Easy', 'Medium', 'Hard', 'Very Hard'].map((label) => {
+                     const isSelected = difficultyFilter === label;
+                     return (
+                       <button
+                         key={label}
+                         type="button"
+                         onClick={() => setDifficultyFilter(label)}
+                         className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                           isSelected
+                             ? 'bg-[#0062ff] text-white shadow-sm shadow-[#0062ff]/25 font-bold'
+                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                         }`}
+                       >
+                         {label}
+                       </button>
+                     );
+                   })}
+                 </div>
               </div>
 
               {/* Right: RANK Filter & Actions */}
@@ -1104,22 +1087,7 @@ export function Keywords() {
                   })}
                 </div>
 
-                {/* Keyword count & Reset Filter button */}
-                {(difficultyFilter !== 'All' || rankFilter !== 'All' || searchQuery) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDifficultyFilter('All');
-                      setRankFilter('All');
-                      setSearchQuery('');
-                    }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold text-slate-500 hover:text-rose-500 bg-slate-100 dark:bg-slate-800/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-800 transition-all cursor-pointer"
-                    title="Reset all filters"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Reset
-                  </button>
-                )}
+
 
                 <span className="hidden 2xl:inline-flex items-center text-[11px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-800/60">
                   {filteredDailyKeywords.length} of {keywords.length} keywords
@@ -1143,7 +1111,7 @@ export function Keywords() {
                   <th className="py-3 px-4" style={{ width: 140 }}>
                     Search Volume
                   </th>
-                  <th className="py-3 px-4 text-center" style={{ width: 140 }}>
+                  <th className="py-3 px-4 text-center whitespace-nowrap" style={{ width: 140 }}>
                     Difficulty (KD)
                   </th>
                   <th className="py-3 px-4 text-center" style={{ width: 130 }}>
@@ -1248,19 +1216,15 @@ export function Keywords() {
                         </td>
 
                         {/* Difficulty (KD) Badge */}
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-4 text-center whitespace-nowrap">
                           <span
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border"
+                            className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-bold border min-w-[85px]"
                             style={{
                               color: kdInfo.color,
                               background: kdInfo.bg,
                               borderColor: kdInfo.border
                             }}
                           >
-                            <span
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: kdInfo.color }}
-                            />
                             <span>
                               {kdInfo.score}% {kdInfo.level}
                             </span>
@@ -1421,7 +1385,7 @@ export function Keywords() {
                   <th className="py-3 px-3 text-right" style={{ width: 100 }}>
                     Volume
                   </th>
-                  <th className="py-3 px-3 text-center" style={{ width: 140 }}>
+                  <th className="py-3 px-3 text-center whitespace-nowrap" style={{ width: 140 }}>
                     Difficulty (KD)
                   </th>
                   {months.map((m) => (
@@ -1465,19 +1429,15 @@ export function Keywords() {
                         </td>
 
                         {/* Difficulty */}
-                        <td className="py-3 px-3 text-center">
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
                           <span
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                            className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold border min-w-[78px]"
                             style={{
                               color: kd.color,
                               background: kd.bg,
                               borderColor: kd.border
                             }}
                           >
-                            <span
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: kd.color }}
-                            />
                             <span>
                               {kd.score}% {kd.level}
                             </span>
@@ -1850,15 +1810,19 @@ export function Keywords() {
                     data={(viewingKeyword.history || []).map((p, i) => ({ day: `D${i + 1}`, rank: p }))}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                    <XAxis dataKey="day" stroke="#94a3b8" fontSize={9} />
-                    <YAxis reversed domain={[1, 100]} stroke="#94a3b8" fontSize={9} />
+                    <XAxis dataKey="day" stroke="#64748b" fontSize={9} fontWeight={600} />
+                    <YAxis reversed domain={[1, 100]} stroke="#64748b" fontSize={9} fontWeight={600} />
                     <RechartsTooltip
                       contentStyle={{
                         backgroundColor: '#0f172a',
                         borderRadius: 8,
                         fontSize: 11,
-                        border: '1px solid rgba(255,255,255,0.1)'
+                        border: '1px solid #334155',
+                        color: '#ffffff',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)'
                       }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700, marginBottom: '2px' }}
+                      itemStyle={{ color: '#ffffff', fontWeight: 600 }}
                     />
                     <Line
                       type="monotone"

@@ -1,6 +1,7 @@
 import express from "express";
 import { getDb } from "../config/db.js";
 import { formatKeywordRow } from "./keywords.routes.js";
+import { formatBlogRow } from "./blogs.routes.js";
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ function formatBacklinkRow(b) {
   };
 }
 
-// GET /api/data - Return all keywords, projects, categories, backlinks
+// GET /api/data - Return all keywords, projects, categories, backlinks, blogs
 router.get("/", async (req, res) => {
   try {
     const { client, type } = await getDb();
@@ -51,6 +52,7 @@ router.get("/", async (req, res) => {
     let projects = [];
     let categories = [];
     let backlinks = [];
+    let blogs = [];
 
     if (type === "postgres") {
       const kwRes = await client.query("SELECT * FROM keywords ORDER BY created_at DESC");
@@ -64,6 +66,13 @@ router.get("/", async (req, res) => {
 
       const blRes = await client.query("SELECT * FROM backlinks ORDER BY created_at DESC");
       backlinks = blRes.rows.map(formatBacklinkRow);
+
+      try {
+        const blgRes = await client.query("SELECT * FROM blogs ORDER BY created_at DESC");
+        blogs = blgRes.rows.map(formatBlogRow);
+      } catch (e) {
+        console.warn("Could not query blogs from postgres:", e.message);
+      }
     } else if (type === "mysql") {
       const [kwRes] = await client.query("SELECT * FROM keywords ORDER BY created_at DESC");
       keywords = kwRes.map(formatKeywordRow);
@@ -76,14 +85,26 @@ router.get("/", async (req, res) => {
 
       const [blRes] = await client.query("SELECT * FROM backlinks ORDER BY created_at DESC");
       backlinks = blRes.map(formatBacklinkRow);
+
+      try {
+        const [blgRes] = await client.query("SELECT * FROM blogs ORDER BY created_at DESC");
+        blogs = blgRes.map(formatBlogRow);
+      } catch (e) {
+        console.warn("Could not query blogs from mysql:", e.message);
+      }
     } else {
       keywords = client.prepare("SELECT * FROM keywords ORDER BY created_at DESC").all().map(formatKeywordRow);
       projects = client.prepare("SELECT * FROM projects ORDER BY created_at ASC").all().map(formatProjectRow);
       categories = client.prepare("SELECT * FROM categories ORDER BY created_at ASC").all().map(formatCategoryRow);
       backlinks = client.prepare("SELECT * FROM backlinks ORDER BY created_at DESC").all().map(formatBacklinkRow);
+      try {
+        blogs = client.prepare("SELECT * FROM blogs ORDER BY created_at DESC").all().map(formatBlogRow);
+      } catch (e) {
+        console.warn("Could not query blogs from sqlite:", e.message);
+      }
     }
 
-    res.json({ keywords, projects, categories, backlinks });
+    res.json({ keywords, projects, categories, backlinks, blogs });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch database data: " + err.message });
   }
@@ -92,7 +113,7 @@ router.get("/", async (req, res) => {
 // POST /api/data/sync - Sync full state from frontend
 router.post("/sync", async (req, res) => {
   try {
-    const { keywords = [], projects = [], categories = [], backlinks = [] } = req.body;
+    const { keywords = [], projects = [], categories = [], backlinks = [], blogs = [] } = req.body;
     const { client, type } = await getDb();
 
     if (type === "postgres") {
@@ -214,6 +235,43 @@ router.post("/sync", async (req, res) => {
               b.anchorText || "Brand Link",
               Number(b.da) || 0,
               b.deletedAt || null,
+            ]
+          );
+        }
+
+        for (const blg of blogs) {
+          await pgClient.query(
+            `INSERT INTO blogs (id, project_id, domain, title, url, focus_keyword, secondary_keyword, category, author, publish_date, last_updated, status, deleted_at, deleted_with)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+             ON CONFLICT (id) DO UPDATE SET
+              project_id = EXCLUDED.project_id,
+              domain = EXCLUDED.domain,
+              title = EXCLUDED.title,
+              url = EXCLUDED.url,
+              focus_keyword = EXCLUDED.focus_keyword,
+              secondary_keyword = EXCLUDED.secondary_keyword,
+              category = EXCLUDED.category,
+              author = EXCLUDED.author,
+              publish_date = EXCLUDED.publish_date,
+              last_updated = EXCLUDED.last_updated,
+              status = EXCLUDED.status,
+              deleted_at = EXCLUDED.deleted_at,
+              deleted_with = EXCLUDED.deleted_with`,
+            [
+              blg.id,
+              blg.projectId || "site-1",
+              blg.domain || "",
+              blg.title || "",
+              blg.url || "",
+              blg.focusKeyword || blg.focus_keyword || "",
+              blg.secondaryKeyword || blg.secondary_keyword || "",
+              blg.category || "General",
+              blg.author || "Admin",
+              blg.publishDate || blg.publish_date || null,
+              blg.lastUpdated || blg.last_updated || null,
+              blg.status || "Draft",
+              blg.deletedAt || null,
+              blg.deletedWith || null
             ]
           );
         }
@@ -348,6 +406,43 @@ router.post("/sync", async (req, res) => {
           );
         }
 
+        for (const blg of blogs) {
+          await conn.query(
+            `INSERT INTO blogs (id, project_id, domain, title, url, focus_keyword, secondary_keyword, category, author, publish_date, last_updated, status, deleted_at, deleted_with)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+              project_id = VALUES(project_id),
+              domain = VALUES(domain),
+              title = VALUES(title),
+              url = VALUES(url),
+              focus_keyword = VALUES(focus_keyword),
+              secondary_keyword = VALUES(secondary_keyword),
+              category = VALUES(category),
+              author = VALUES(author),
+              publish_date = VALUES(publish_date),
+              last_updated = VALUES(last_updated),
+              status = VALUES(status),
+              deleted_at = VALUES(deleted_at),
+              deleted_with = VALUES(deleted_with)`,
+            [
+              blg.id,
+              blg.projectId || "site-1",
+              blg.domain || "",
+              blg.title || "",
+              blg.url || "",
+              blg.focusKeyword || blg.focus_keyword || "",
+              blg.secondaryKeyword || blg.secondary_keyword || "",
+              blg.category || "General",
+              blg.author || "Admin",
+              blg.publishDate || blg.publish_date || null,
+              blg.lastUpdated || blg.last_updated || null,
+              blg.status || "Draft",
+              blg.deletedAt || null,
+              blg.deletedWith || null
+            ]
+          );
+        }
+
         await conn.commit();
       } catch (e) {
         await conn.rollback();
@@ -475,6 +570,43 @@ router.post("/sync", async (req, res) => {
             b.deletedAt || null
           );
         }
+
+        const insBlg = client.prepare(
+          `INSERT INTO blogs (id, project_id, domain, title, url, focus_keyword, secondary_keyword, category, author, publish_date, last_updated, status, deleted_at, deleted_with)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (id) DO UPDATE SET
+            project_id = excluded.project_id,
+            domain = excluded.domain,
+            title = excluded.title,
+            url = excluded.url,
+            focus_keyword = excluded.focus_keyword,
+            secondary_keyword = excluded.secondary_keyword,
+            category = excluded.category,
+            author = excluded.author,
+            publish_date = excluded.publish_date,
+            last_updated = excluded.last_updated,
+            status = excluded.status,
+            deleted_at = excluded.deleted_at,
+            deleted_with = excluded.deleted_with`
+        );
+        for (const blg of blogs) {
+          insBlg.run(
+            blg.id,
+            blg.projectId || "site-1",
+            blg.domain || "",
+            blg.title || "",
+            blg.url || "",
+            blg.focusKeyword || blg.focus_keyword || "",
+            blg.secondaryKeyword || blg.secondary_keyword || "",
+            blg.category || "General",
+            blg.author || "Admin",
+            blg.publishDate || blg.publish_date || null,
+            blg.lastUpdated || blg.last_updated || null,
+            blg.status || "Draft",
+            blg.deletedAt || null,
+            blg.deletedWith || null
+          );
+        }
       });
       syncTx();
     }
@@ -485,7 +617,8 @@ router.post("/sync", async (req, res) => {
         keywords: keywords.length,
         projects: projects.length,
         categories: categories.length,
-        backlinks: backlinks.length
+        backlinks: backlinks.length,
+        blogs: blogs.length
       }
     });
   } catch (err) {

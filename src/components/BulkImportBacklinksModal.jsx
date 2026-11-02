@@ -283,7 +283,7 @@ export function BulkImportBacklinksModal({
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Target Project:{' '}
-              <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+              <span className="text-[#0062ff] dark:text-[#38bdf8] font-semibold">
                 {currentProjectDomain}
               </span>
             </p>
@@ -342,7 +342,7 @@ export function BulkImportBacklinksModal({
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <FileText className="w-4 h-4 text-indigo-400" />
+              <FileText className="w-4 h-4 text-[#0062ff] dark:text-[#38bdf8]" />
               <span>Paste Text / CSV Rows</span>
             </button>
           </div>
@@ -366,8 +366,8 @@ export function BulkImportBacklinksModal({
                 onClick={() => document.getElementById('backlink-excel-input')?.click()}
                 className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 text-center flex flex-col items-center justify-center gap-2.5 cursor-pointer transition ${
                   isDragging
-                    ? 'border-indigo-500 bg-indigo-500/10'
-                    : 'border-slate-300 dark:border-slate-700/80 hover:border-indigo-500/70 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/40'
+                    ? 'border-[#0062ff] bg-[#0062ff]/10'
+                    : 'border-slate-300 dark:border-slate-700/80 hover:border-[#0062ff]/70 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/40'
                 }`}
               >
                 <input
@@ -377,7 +377,7 @@ export function BulkImportBacklinksModal({
                   onChange={handleFileUpload}
                   className="hidden"
                 />
-                <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
+                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
                   <UploadCloud className="w-5 h-5 text-slate-400 dark:text-slate-300" />
                 </div>
                 <div className="space-y-0.5">
@@ -385,7 +385,7 @@ export function BulkImportBacklinksModal({
                     Drag and drop your Excel or CSV file here
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    or <span className="text-indigo-600 dark:text-indigo-400 underline font-medium">browse from your computer</span>
+                    or <span className="text-[#0062ff] dark:text-[#38bdf8] underline font-medium">browse from your computer</span>
                   </p>
                 </div>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-sm">
@@ -429,13 +429,13 @@ export function BulkImportBacklinksModal({
                 placeholder={`https://medium.com/@dev/top-tools-2026\nhttps://quora.com/best-seo-platforms\nProduct Hunt, https://producthunt.com/posts/my-tool, ${targetSubmittedUrl}, Directory, Done`}
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-white resize-y"
+                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0062ff] text-slate-900 dark:text-white resize-y"
               />
               <div className="flex items-center justify-between">
                 <button
                   type="button"
                   onClick={handleParseText}
-                  className="px-3.5 py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition cursor-pointer"
+                  className="px-3.5 py-2 text-xs font-semibold bg-blue-50 dark:bg-[#0062ff]/15 text-[#0062ff] dark:text-[#38bdf8] border border-blue-200 dark:border-[#0062ff]/30 rounded-xl hover:bg-blue-100 dark:hover:bg-[#0062ff]/25 transition cursor-pointer"
                 >
                   ⚡ Preview Parsed Items ({pastedText.split('\n').filter(Boolean).length} lines)
                 </button>
@@ -479,7 +479,7 @@ export function BulkImportBacklinksModal({
                       <tr key={idx} className="hover:bg-slate-100/50 dark:hover:bg-slate-800/40">
                         <td className="py-1.5 px-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
                         <td className="py-1.5 px-3 font-semibold">{item.websiteName}</td>
-                        <td className="py-1.5 px-3 font-mono text-[11px] truncate max-w-[200px] text-indigo-600 dark:text-indigo-400">
+                        <td className="py-1.5 px-3 font-mono text-[11px] truncate max-w-[200px] text-[#0062ff] dark:text-[#38bdf8]">
                           {item.websiteUrl}
                         </td>
                         <td className="py-1.5 px-3">{item.type}</td>

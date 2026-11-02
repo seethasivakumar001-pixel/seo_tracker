@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend
-} from 'recharts';
-import {
   Smartphone,
   Monitor,
   Sparkles,
@@ -19,7 +9,6 @@ import {
   Loader2,
   RotateCcw,
   ExternalLink,
-  History,
   Plus,
   Check,
   Search
@@ -43,33 +32,91 @@ export function Performance() {
   const activeDomain = currentWebsite?.domain || 'my99exch.ai';
   const defaultUrl = `https://${activeDomain}/`;
 
+  // Helper to load audit result from localStorage
+  const getInitialAuditResult = (domain, device) => {
+    try {
+      const cleanDomain = domain?.replace(/^https?:\/\//, '').replace(/\/+$/, '') || '';
+      const saved =
+        localStorage.getItem(`pagespeed_result_${cleanDomain}_${device}`) ||
+        localStorage.getItem(`pagespeed_result_${cleanDomain}`);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return null;
+  };
+
+  // Helper to load audited pages from localStorage
+  const getInitialAuditedPages = (domain) => {
+    try {
+      const cleanDomain = domain?.replace(/^https?:\/\//, '').replace(/\/+$/, '') || '';
+      const saved = localStorage.getItem(`audited_pages_${cleanDomain}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  };
+
   // Live URL PageSpeed Auditor State
   const [testUrl, setTestUrl] = useState(defaultUrl);
   const [isTestingLive, setIsTestingLive] = useState(false);
-  const [liveResult, setLiveResult] = useState(null);
+  const [liveResult, setLiveResult] = useState(() => getInitialAuditResult(activeDomain, deviceTab));
+  const [auditedPages, setAuditedPages] = useState(() => getInitialAuditedPages(activeDomain));
   const [customPageUrl, setCustomPageUrl] = useState('');
 
-  // Dynamic Audited Pages state for currently active website
-  const getInitialAuditedPages = (domain, device) => [
-    { url: `https://${domain}/`, device: device === 'desktop' ? 'Desktop' : 'Mobile', lcp: '2.1s', inp: '140ms', cls: '0.02', score: 88 },
-    { url: `https://${domain}/sports`, device: device === 'desktop' ? 'Desktop' : 'Mobile', lcp: '2.5s', inp: '180ms', cls: '0.04', score: 82 },
-    { url: `https://${domain}/in-play`, device: device === 'desktop' ? 'Desktop' : 'Mobile', lcp: '2.8s', inp: '210ms', cls: '0.06', score: 76 },
-    { url: `https://${domain}/casino`, device: device === 'desktop' ? 'Desktop' : 'Mobile', lcp: '2.3s', inp: '160ms', cls: '0.03', score: 85 },
-    { url: `https://${domain}/promotions`, device: device === 'desktop' ? 'Desktop' : 'Mobile', lcp: '1.9s', inp: '120ms', cls: '0.01', score: 92 }
-  ];
-
-  const [auditedPages, setAuditedPages] = useState(() => getInitialAuditedPages(activeDomain, deviceTab));
-
-  // Sync testUrl and auditedPages when website changes
+  // Sync testUrl and load cached/backend data when website or deviceTab changes
   useEffect(() => {
-    const updatedDefault = `https://${currentWebsite?.domain || 'my99exch.ai'}/`;
+    const domain = (currentWebsite?.domain || activeDomain).replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    const updatedDefault = `https://${domain}/`;
     setTestUrl(updatedDefault);
-    setAuditedPages(getInitialAuditedPages(currentWebsite?.domain || 'my99exch.ai', deviceTab));
-    setLiveResult(null);
-  }, [currentWebsite?.id, currentWebsite?.domain]);
+
+    // 1. Immediately load cached data from localStorage (0ms, synchronous)
+    const cachedResult = getInitialAuditResult(domain, deviceTab);
+    const cachedPages = getInitialAuditedPages(domain);
+    if (cachedResult) {
+      setLiveResult(cachedResult);
+    }
+    if (cachedPages && cachedPages.length > 0) {
+      setAuditedPages(cachedPages);
+    }
+
+    // 2. Fetch latest from backend database (ensures sync across page/project switches)
+    let isSubscribed = true;
+    (async () => {
+      try {
+        const [dbResult, dbPages] = await Promise.all([
+          seoApi.getPageSpeedLatest(domain, deviceTab),
+          seoApi.getAuditedLandingPages(domain)
+        ]);
+        if (!isSubscribed) return;
+
+        if (dbResult) {
+          setLiveResult(dbResult);
+          localStorage.setItem(`pagespeed_result_${domain}_${deviceTab}`, JSON.stringify(dbResult));
+          localStorage.setItem(`pagespeed_result_${domain}`, JSON.stringify(dbResult));
+        } else if (!cachedResult) {
+          setLiveResult(null);
+        }
+
+        if (Array.isArray(dbPages) && dbPages.length > 0) {
+          setAuditedPages(dbPages);
+          localStorage.setItem(`audited_pages_${domain}`, JSON.stringify(dbPages));
+        } else if (!cachedPages || cachedPages.length === 0) {
+          setAuditedPages([]);
+        }
+      } catch (err) {
+        console.warn('Failed to sync pagespeed data from backend:', err);
+      }
+    })();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [currentWebsite?.id, currentWebsite?.domain, deviceTab]);
 
   const {
-    data: perfData,
     isLoading,
     isError,
     error,
@@ -87,6 +134,7 @@ export function Performance() {
       return;
     }
 
+    const domain = (currentWebsite?.domain || activeDomain).replace(/^https?:\/\//, '').replace(/\/+$/, '');
     setTestUrl(target);
     setIsTestingLive(true);
     const toastId = toast.loading(`Auditing ${target} (${device}) via Google PageSpeed API...`);
@@ -109,7 +157,23 @@ export function Performance() {
         const filtered = prev.filter(
           (p) => !(p.url === newEntry.url && p.device.toLowerCase() === newEntry.device.toLowerCase())
         );
-        return [newEntry, ...filtered];
+        const updated = [newEntry, ...filtered];
+        // Persist to localStorage
+        localStorage.setItem(`audited_pages_${domain}`, JSON.stringify(updated));
+        return updated;
+      });
+
+      // Persist audit result to localStorage
+      localStorage.setItem(`pagespeed_result_${domain}_${device}`, JSON.stringify(res));
+      localStorage.setItem(`pagespeed_result_${domain}`, JSON.stringify(res));
+
+      // Persist to backend database
+      seoApi.savePageSpeedAudit({
+        domain,
+        url: res.url,
+        strategy: device,
+        result: res,
+        landingPage: newEntry
       });
 
       toast.success(`Live audit complete for ${target}!`, { id: toastId });
@@ -121,9 +185,11 @@ export function Performance() {
   };
 
   const handleResetLive = () => {
+    const domain = (currentWebsite?.domain || activeDomain).replace(/^https?:\/\//, '').replace(/\/+$/, '');
     setLiveResult(null);
     setTestUrl(defaultUrl);
-    setAuditedPages(getInitialAuditedPages(activeDomain, deviceTab));
+    localStorage.removeItem(`pagespeed_result_${domain}_${deviceTab}`);
+    localStorage.removeItem(`pagespeed_result_${domain}`);
     toast.success('Reset to default domain baseline');
   };
 
@@ -142,18 +208,11 @@ export function Performance() {
   }
 
   // Active Category Scores (Performance, Accessibility, Best Practices, SEO)
-  const defaultCategories = perfData?.categories?.[deviceTab] || {
-    performance: perfData?.overallScore?.[deviceTab] || 94,
-    accessibility: 96,
-    bestPractices: 100,
-    seo: 98
-  };
-
-  const currentCategories = liveResult?.categories || defaultCategories;
+  const currentCategories = liveResult?.categories || null;
 
   // Active Core Web Vitals Metrics
-  const activeMetrics = liveResult?.metrics || perfData?.metrics?.[deviceTab] || perfData?.metrics?.desktop;
-  const activeLighthouse = liveResult?.lighthouseMetrics;
+  const activeMetrics = liveResult?.metrics || null;
+  const activeLighthouse = liveResult?.lighthouseMetrics || null;
 
   return (
     <div className="space-y-6">
@@ -165,7 +224,7 @@ export function Performance() {
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {liveResult ? (
-              <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+              <span className="text-[#0062ff] dark:text-[#38bdf8] font-semibold">
                 Live Lighthouse & CrUX audit results for {liveResult.url} ({deviceTab})
               </span>
             ) : (
@@ -190,7 +249,7 @@ export function Performance() {
       </div>
 
       {/* Live PageSpeed URL Tester Bar */}
-      <Card className="border border-indigo-500/20 shadow-md">
+      <Card className="border border-[#0062ff]/20 shadow-md">
         <CardContent className="p-4 sm:p-5 space-y-3">
           <form
             onSubmit={(e) => {
@@ -200,13 +259,13 @@ export function Performance() {
             className="flex flex-col md:flex-row items-center gap-3"
           >
             <div className="relative flex-1 w-full">
-              <Globe className="w-4 h-4 text-indigo-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Globe className="w-4 h-4 text-[#0062ff] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="url"
                 value={testUrl}
                 onChange={(e) => setTestUrl(e.target.value)}
                 placeholder={`https://${activeDomain}/`}
-                className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-[#0062ff] shadow-inner"
               />
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">
@@ -246,7 +305,7 @@ export function Performance() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-500" />
+            <Sparkles className="w-4 h-4 text-[#0062ff]" />
             Lighthouse Run Categories
           </h2>
           {liveResult && (
@@ -260,24 +319,28 @@ export function Performance() {
           {/* 1. Performance */}
           <Card className="flex flex-col items-center justify-center p-5 text-center transition-all hover:border-indigo-500/40">
             <ScoreRing
-              score={currentCategories.performance}
+              score={currentCategories ? currentCategories.performance : null}
               size={120}
               strokeWidth={10}
               label="Performance"
               sublabel="Page Speed & Vitals"
-              showGrade={true}
+              showGrade={!!currentCategories}
             />
             <div className="mt-3">
               <Badge
                 variant={
-                  currentCategories.performance >= 90
+                  !currentCategories
+                    ? 'neutral'
+                    : currentCategories.performance >= 90
                     ? 'success'
                     : currentCategories.performance >= 60
                     ? 'warning'
                     : 'danger'
                 }
               >
-                {currentCategories.performance >= 90
+                {!currentCategories
+                  ? 'Not Audited Yet'
+                  : currentCategories.performance >= 90
                   ? 'Passing CWV'
                   : currentCategories.performance >= 60
                   ? 'Needs Optimization'
@@ -289,24 +352,28 @@ export function Performance() {
           {/* 2. Accessibility */}
           <Card className="flex flex-col items-center justify-center p-5 text-center transition-all hover:border-indigo-500/40">
             <ScoreRing
-              score={currentCategories.accessibility}
+              score={currentCategories ? currentCategories.accessibility : null}
               size={120}
               strokeWidth={10}
               label="Accessibility"
               sublabel="a11y, ARIA & Contrast"
-              showGrade={true}
+              showGrade={!!currentCategories}
             />
             <div className="mt-3">
               <Badge
                 variant={
-                  currentCategories.accessibility >= 90
+                  !currentCategories
+                    ? 'neutral'
+                    : currentCategories.accessibility >= 90
                     ? 'success'
                     : currentCategories.accessibility >= 60
                     ? 'warning'
                     : 'danger'
                 }
               >
-                {currentCategories.accessibility >= 90
+                {!currentCategories
+                  ? 'Not Audited Yet'
+                  : currentCategories.accessibility >= 90
                   ? 'Optimal Contrast'
                   : currentCategories.accessibility >= 60
                   ? 'Check ARIA / Labels'
@@ -318,24 +385,28 @@ export function Performance() {
           {/* 3. Best Practices */}
           <Card className="flex flex-col items-center justify-center p-5 text-center transition-all hover:border-indigo-500/40">
             <ScoreRing
-              score={currentCategories.bestPractices}
+              score={currentCategories ? currentCategories.bestPractices : null}
               size={120}
               strokeWidth={10}
               label="Best Practices"
               sublabel="Security & Modern Web"
-              showGrade={true}
+              showGrade={!!currentCategories}
             />
             <div className="mt-3">
               <Badge
                 variant={
-                  currentCategories.bestPractices >= 90
+                  !currentCategories
+                    ? 'neutral'
+                    : currentCategories.bestPractices >= 90
                     ? 'success'
                     : currentCategories.bestPractices >= 60
                     ? 'warning'
                     : 'danger'
                 }
               >
-                {currentCategories.bestPractices >= 90
+                {!currentCategories
+                  ? 'Not Audited Yet'
+                  : currentCategories.bestPractices >= 90
                   ? 'Standards Compliant'
                   : currentCategories.bestPractices >= 60
                   ? 'Security Notice'
@@ -347,24 +418,28 @@ export function Performance() {
           {/* 4. SEO */}
           <Card className="flex flex-col items-center justify-center p-5 text-center transition-all hover:border-indigo-500/40">
             <ScoreRing
-              score={currentCategories.seo}
+              score={currentCategories ? currentCategories.seo : null}
               size={120}
               strokeWidth={10}
               label="SEO"
               sublabel="Search Engine Optimization"
-              showGrade={true}
+              showGrade={!!currentCategories}
             />
             <div className="mt-3">
               <Badge
                 variant={
-                  currentCategories.seo >= 90
+                  !currentCategories
+                    ? 'neutral'
+                    : currentCategories.seo >= 90
                     ? 'success'
                     : currentCategories.seo >= 60
                     ? 'warning'
                     : 'danger'
                 }
               >
-                {currentCategories.seo >= 90
+                {!currentCategories
+                  ? 'Not Audited Yet'
+                  : currentCategories.seo >= 90
                   ? 'Indexable & Structured'
                   : currentCategories.seo >= 60
                   ? 'Meta Tags Missing'
@@ -391,7 +466,7 @@ export function Performance() {
                 </Badge>
               </div>
               <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white mt-3">
-                {activeMetrics?.lcp?.value}{activeMetrics?.lcp?.unit}
+                {activeMetrics?.lcp?.value ? `${activeMetrics.lcp.value}${activeMetrics.lcp.unit || 's'}` : '—'}
               </h3>
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
                 Largest Contentful Paint
@@ -412,7 +487,7 @@ export function Performance() {
                 </Badge>
               </div>
               <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white mt-3">
-                {activeMetrics?.inp?.value}{activeMetrics?.inp?.unit}
+                {activeMetrics?.inp?.value ? `${activeMetrics.inp.value}${activeMetrics.inp.unit || 'ms'}` : '—'}
               </h3>
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
                 Interaction to Next Paint
@@ -433,7 +508,7 @@ export function Performance() {
                 </Badge>
               </div>
               <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white mt-3">
-                {activeMetrics?.cls?.value}
+                {activeMetrics?.cls?.value !== undefined && activeMetrics?.cls?.value !== null ? activeMetrics.cls.value : '—'}
               </h3>
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
                 Cumulative Layout Shift
@@ -451,7 +526,7 @@ export function Performance() {
         <div className="p-3.5 rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <span className="text-[10px] font-bold uppercase text-slate-400">First Contentful Paint (FCP)</span>
           <p className="text-lg font-black text-slate-900 dark:text-white mt-1">
-            {activeLighthouse?.['First Contentful Paint'] || `${activeMetrics?.fcp?.value || 0.9}s`}
+            {activeLighthouse?.['First Contentful Paint'] || (activeMetrics?.fcp?.value ? `${activeMetrics.fcp.value}s` : '—')}
           </p>
           <span className="text-[11px] text-slate-400">Initial DOM render</span>
         </div>
@@ -459,7 +534,7 @@ export function Performance() {
         <div className="p-3.5 rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <span className="text-[10px] font-bold uppercase text-slate-400">Speed Index</span>
           <p className="text-lg font-black text-slate-900 dark:text-white mt-1">
-            {activeLighthouse?.['Speed Index'] || '1.2s'}
+            {activeLighthouse?.['Speed Index'] || '—'}
           </p>
           <span className="text-[11px] text-slate-400">Visual population rate</span>
         </div>
@@ -467,7 +542,7 @@ export function Performance() {
         <div className="p-3.5 rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <span className="text-[10px] font-bold uppercase text-slate-400">Total Blocking Time (TBT)</span>
           <p className="text-lg font-black text-slate-900 dark:text-white mt-1">
-            {activeLighthouse?.['Total Blocking Time'] || '40ms'}
+            {activeLighthouse?.['Total Blocking Time'] || '—'}
           </p>
           <span className="text-[11px] text-slate-400">Main thread blockage</span>
         </div>
@@ -475,53 +550,18 @@ export function Performance() {
         <div className="p-3.5 rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <span className="text-[10px] font-bold uppercase text-slate-400">Time to First Byte (TTFB)</span>
           <p className="text-lg font-black text-slate-900 dark:text-white mt-1">
-            {activeMetrics?.ttfb?.value ? `${activeMetrics.ttfb.value}ms` : '320ms'}
+            {activeMetrics?.ttfb?.displayValue || (activeMetrics?.ttfb?.value ? `${activeMetrics.ttfb.value}ms` : '—')}
           </p>
           <span className="text-[11px] text-slate-400">Server response time</span>
         </div>
       </div>
-
-      {/* ═══ HISTORY CHART ═══ */}
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Core Web Vitals Pass Rate History</CardTitle>
-            <CardDescription>
-              6-month speed trajectory comparing Desktop vs Mobile for {activeDomain}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={perfData?.history6m || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.15)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis domain={[50, 100]} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <RechartsTooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(51, 65, 85, 0.6)',
-                    color: '#fff',
-                    fontSize: '12px'
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Line type="monotone" dataKey="desktop" stroke="#6366f1" strokeWidth={3} name="Desktop CWV Score" dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="mobile" stroke="#f59e0b" strokeWidth={2.5} name="Mobile CWV Score" dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* ═══ AUDITED KEY LANDING PAGES TABLE (UPDATED DYNAMICALLY FOR THE ACTIVE DOMAIN) ═══ */}
       <Card className="border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
           <div>
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Globe className="w-4 h-4 text-indigo-500" />
+              <Globe className="w-4 h-4 text-[#0062ff]" />
               <span>Audited Key Landing Pages</span>
             </CardTitle>
             <CardDescription className="text-xs">
@@ -547,7 +587,7 @@ export function Performance() {
                 value={customPageUrl}
                 onChange={(e) => setCustomPageUrl(e.target.value)}
                 placeholder="e.g. /pricing or https://..."
-                className="w-44 sm:w-60 px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-44 sm:w-60 px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-[#0062ff]"
               />
               <button
                 type="submit"
@@ -575,16 +615,23 @@ export function Performance() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-700 dark:text-slate-300">
-                {auditedPages.map((page, idx) => (
+                {auditedPages.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
+                      No audited landing pages yet for {currentWebsite?.domain || activeDomain}. Enter a page URL above and click &quot;Test Live Speed&quot; to run an audit.
+                    </td>
+                  </tr>
+                ) : (
+                  auditedPages.map((page, idx) => (
                   <tr key={`${page.url}-${page.device}-${idx}`} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="px-5 py-3.5 font-mono text-indigo-600 dark:text-indigo-400 font-semibold truncate max-w-sm">
+                    <td className="px-5 py-3.5 font-mono text-[#0062ff] dark:text-[#38bdf8] font-semibold truncate max-w-sm">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="truncate">{page.url}</span>
                         <a
                           href={page.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-slate-400 hover:text-indigo-500 transition-colors"
+                          className="text-slate-400 hover:text-[#0062ff] transition-colors"
                           title="Open URL"
                         >
                           <ExternalLink className="w-3 h-3" />
@@ -618,13 +665,13 @@ export function Performance() {
                         type="button"
                         onClick={() => handleRunLiveTest(page.url, deviceTab)}
                         disabled={isTestingLive}
-                        className="px-3 py-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition-colors cursor-pointer"
+                        className="inline-flex items-center justify-center px-3.5 py-1 rounded-full text-xs font-bold border border-blue-200 dark:border-blue-800/60 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-[#0062ff] dark:text-[#38bdf8] shadow-2xs transition-all cursor-pointer"
                       >
                         Audit
                       </button>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

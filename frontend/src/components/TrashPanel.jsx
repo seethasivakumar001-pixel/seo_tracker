@@ -9,21 +9,24 @@ export default function TrashPanel({
   trashedCategories = [],
   trashedKeywords = [],
   trashedBacklinks = [],
+  trashedBlogs = [],
   allProjects = [],
   allCategories = [],
   onRestoreProject,
   onRestoreCategory,
   onRestoreKeyword,
   onRestoreBacklink,
+  onRestoreBlog,
   onPurgeProject,
   onPurgeCategory,
   onPurgeKeyword,
   onPurgeBacklink,
+  onPurgeBlog,
   onBulkRestore,
   onBulkPurge,
   onEmptyTrash,
 }) {
-  const [activeTab, setActiveTab] = useState("keywords"); // "projects" | "categories" | "keywords" | "backlinks"
+  const [activeTab, setActiveTab] = useState("keywords"); // "projects" | "categories" | "keywords" | "backlinks" | "blogs"
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [confirmModal, setConfirmModal] = useState(null);
@@ -47,15 +50,16 @@ export default function TrashPanel({
   useEffect(() => {
     if (isOpen) {
       if (activeTab === "keywords" && trashedKeywords.length === 0) {
-        if (trashedBacklinks.length > 0) setActiveTab("backlinks");
+        if (trashedBlogs.length > 0) setActiveTab("blogs");
+        else if (trashedBacklinks.length > 0) setActiveTab("backlinks");
         else if (trashedCategories.length > 0) setActiveTab("categories");
         else if (trashedProjects.length > 0) setActiveTab("projects");
       }
     }
-  }, [isOpen, trashedKeywords.length, trashedBacklinks.length, trashedCategories.length, trashedProjects.length]);
+  }, [isOpen, trashedKeywords.length, trashedBacklinks.length, trashedBlogs.length, trashedCategories.length, trashedProjects.length]);
 
   const totalTrashCount =
-    trashedProjects.length + trashedCategories.length + trashedKeywords.length + trashedBacklinks.length;
+    trashedProjects.length + trashedCategories.length + trashedKeywords.length + trashedBacklinks.length + trashedBlogs.length;
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return trashedProjects;
@@ -95,6 +99,19 @@ export default function TrashPanel({
     );
   }, [trashedBacklinks, searchQuery]);
 
+  const filteredBlogs = useMemo(() => {
+    if (!searchQuery.trim()) return trashedBlogs;
+    const q = searchQuery.toLowerCase();
+    return trashedBlogs.filter(
+      (b) =>
+        (b.title && b.title.toLowerCase().includes(q)) ||
+        (b.url && b.url.toLowerCase().includes(q)) ||
+        (b.focusKeyword && b.focusKeyword.toLowerCase().includes(q)) ||
+        (b.author && b.author.toLowerCase().includes(q)) ||
+        (b.category && b.category.toLowerCase().includes(q))
+    );
+  }, [trashedBlogs, searchQuery]);
+
   const currentItems =
     activeTab === "projects"
       ? filteredProjects
@@ -102,6 +119,8 @@ export default function TrashPanel({
       ? filteredCategories
       : activeTab === "backlinks"
       ? filteredBacklinks
+      : activeTab === "blogs"
+      ? filteredBlogs
       : filteredKeywords;
 
   const handleToggleSelect = (id) => {
@@ -146,8 +165,8 @@ export default function TrashPanel({
   };
 
   const handleSinglePurgeClick = (item) => {
-    const itemName = item?.keyword || item?.name || item?.websiteName || "this item";
-    const singularType = activeTab === "keywords" ? "keyword" : activeTab === "categories" ? "category" : activeTab === "projects" ? "project" : "backlink";
+    const itemName = item?.title || item?.keyword || item?.name || item?.websiteName || "this item";
+    const singularType = activeTab === "keywords" ? "keyword" : activeTab === "categories" ? "category" : activeTab === "projects" ? "project" : activeTab === "blogs" ? "blog" : "backlink";
     setConfirmModal({
       type: "purgeItem",
       title: `Delete ${singularType.charAt(0).toUpperCase() + singularType.slice(1)} Forever`,
@@ -158,6 +177,7 @@ export default function TrashPanel({
         if (activeTab === "projects" && onPurgeProject) onPurgeProject(item);
         else if (activeTab === "categories" && onPurgeCategory) onPurgeCategory(item);
         else if (activeTab === "backlinks" && onPurgeBacklink) onPurgeBacklink(item);
+        else if (activeTab === "blogs" && onPurgeBlog) onPurgeBlog(item.id || item);
         else if (onPurgeKeyword) onPurgeKeyword(item);
       }
     });
@@ -265,82 +285,41 @@ export default function TrashPanel({
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 10, marginTop: 10, display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "keywords" ? "active" : ""}`}
-            onClick={() => setActiveTab("keywords")}
-          >
-            Keywords
-            <span
-              style={{
-                marginLeft: 6,
-                fontSize: "0.72rem",
-                background: activeTab === "keywords" ? "rgba(99, 102, 241, 0.3)" : "rgba(255, 255, 255, 0.06)",
-                padding: "1px 6px",
-                borderRadius: 999,
-                fontWeight: 700,
-              }}
-            >
-              {trashedKeywords.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "backlinks" ? "active" : ""}`}
-            onClick={() => setActiveTab("backlinks")}
-          >
-            Backlinks
-            <span
-              style={{
-                marginLeft: 6,
-                fontSize: "0.72rem",
-                background: activeTab === "backlinks" ? "rgba(99, 102, 241, 0.3)" : "rgba(255, 255, 255, 0.06)",
-                padding: "1px 6px",
-                borderRadius: 999,
-                fontWeight: 700,
-              }}
-            >
-              {trashedBacklinks.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "categories" ? "active" : ""}`}
-            onClick={() => setActiveTab("categories")}
-          >
-            Categories
-            <span
-              style={{
-                marginLeft: 6,
-                fontSize: "0.72rem",
-                background: activeTab === "categories" ? "rgba(99, 102, 241, 0.3)" : "rgba(255, 255, 255, 0.06)",
-                padding: "1px 6px",
-                borderRadius: 999,
-                fontWeight: 700,
-              }}
-            >
-              {trashedCategories.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "projects" ? "active" : ""}`}
-            onClick={() => setActiveTab("projects")}
-          >
-            Projects
-            <span
-              style={{
-                marginLeft: 6,
-                fontSize: "0.72rem",
-                background: activeTab === "projects" ? "rgba(99, 102, 241, 0.3)" : "rgba(255, 255, 255, 0.06)",
-                padding: "1px 6px",
-                borderRadius: 999,
-                fontWeight: 700,
-              }}
-            >
-              {trashedProjects.length}
-            </span>
-          </button>
+          {[
+            { id: "keywords", label: "Keywords", count: trashedKeywords.length },
+            { id: "blogs", label: "Blogs", count: trashedBlogs.length },
+            { id: "backlinks", label: "Backlinks", count: trashedBacklinks.length },
+            { id: "categories", label: "Categories", count: trashedCategories.length },
+            { id: "projects", label: "Projects", count: trashedProjects.length },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={`tab-btn ${isActive ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span>{tab.label}</span>
+                <span
+                  style={{
+                    marginLeft: 6,
+                    fontSize: "0.72rem",
+                    padding: "2px 7px",
+                    borderRadius: 999,
+                    fontWeight: 700,
+                  }}
+                  className={
+                    isActive
+                      ? "bg-[#0062ff]/15 text-[#0062ff] dark:text-[#38bdf8]"
+                      : "bg-slate-200/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300"
+                  }
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Bulk Actions Header (when items selected) */}
@@ -359,7 +338,7 @@ export default function TrashPanel({
               marginBottom: 8,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--ink, #f8fafc)", fontWeight: 600 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--ink, #0f172a)", fontWeight: 600 }}>
               <span>{selectedIds.length} {selectedIds.length === 1 ? "item" : "items"} selected</span>
               <button
                 type="button"
@@ -406,7 +385,7 @@ export default function TrashPanel({
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
               </svg>
-              <div style={{ fontSize: "1.05rem", fontWeight: 600, color: "var(--ink, #f8fafc)", marginBottom: 4 }}>
+              <div style={{ fontSize: "1.05rem", fontWeight: 600, color: "var(--ink, #0f172a)", marginBottom: 4 }}>
                 Trash is empty
               </div>
               <p style={{ fontSize: "0.85rem" }}>
@@ -426,6 +405,7 @@ export default function TrashPanel({
                 if (activeTab === "projects" && onRestoreProject) onRestoreProject(item);
                 else if (activeTab === "categories" && onRestoreCategory) onRestoreCategory(item);
                 else if (activeTab === "backlinks" && onRestoreBacklink) onRestoreBacklink(item);
+                else if (activeTab === "blogs" && onRestoreBlog) onRestoreBlog(item.id || item);
                 else if (onRestoreKeyword) onRestoreKeyword(item);
               }}
               onDeleteForever={handleSinglePurgeClick}

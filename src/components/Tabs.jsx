@@ -25,7 +25,7 @@ export function Tabs({ tabs = [], activeTab, onChange, className }) {
                 className={cn(
                   'px-1.5 py-0.2 rounded-full text-[10px] font-bold',
                   isActive
-                    ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400'
+                    ? 'bg-[#0062ff]/15 text-[#0062ff] dark:text-[#38bdf8]'
                     : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                 )}
               >

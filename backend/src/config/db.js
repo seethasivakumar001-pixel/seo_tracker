@@ -223,6 +223,36 @@ function initSqliteSchema(db) {
       result_json TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS audited_landing_pages (
+      id TEXT PRIMARY KEY,
+      domain TEXT NOT NULL,
+      url TEXT NOT NULL,
+      device TEXT NOT NULL,
+      lcp TEXT,
+      inp TEXT,
+      cls TEXT,
+      score INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS blogs (
+      id TEXT PRIMARY KEY,
+      project_id TEXT,
+      domain TEXT,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      focus_keyword TEXT,
+      secondary_keyword TEXT,
+      category TEXT DEFAULT 'General',
+      author TEXT DEFAULT 'Admin',
+      publish_date TEXT,
+      last_updated TEXT,
+      status TEXT DEFAULT 'Draft',
+      deleted_at DATETIME,
+      deleted_with TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Safe alter migrations for SQLite if table previously existed
@@ -373,6 +403,36 @@ async function initPostgresSchema(pool) {
       url TEXT NOT NULL,
       strategy TEXT NOT NULL,
       result_json JSONB NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS audited_landing_pages (
+      id TEXT PRIMARY KEY,
+      domain TEXT NOT NULL,
+      url TEXT NOT NULL,
+      device TEXT NOT NULL,
+      lcp TEXT,
+      inp TEXT,
+      cls TEXT,
+      score INTEGER,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS blogs (
+      id TEXT PRIMARY KEY,
+      project_id TEXT,
+      domain TEXT,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      focus_keyword TEXT,
+      secondary_keyword TEXT,
+      category TEXT DEFAULT 'General',
+      author TEXT DEFAULT 'Admin',
+      publish_date DATE,
+      last_updated DATE,
+      status TEXT DEFAULT 'Draft',
+      deleted_at TIMESTAMP WITH TIME ZONE,
+      deleted_with TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
   `);
@@ -594,6 +654,40 @@ async function initMysqlSchema(pool) {
       url TEXT NOT NULL,
       strategy VARCHAR(32) NOT NULL,
       result_json JSON NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS audited_landing_pages (
+      id VARCHAR(64) PRIMARY KEY,
+      domain VARCHAR(255) NOT NULL,
+      url TEXT NOT NULL,
+      device VARCHAR(32) NOT NULL,
+      lcp VARCHAR(64),
+      inp VARCHAR(64),
+      cls VARCHAR(64),
+      score INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS blogs (
+      id VARCHAR(64) PRIMARY KEY,
+      project_id VARCHAR(64),
+      domain VARCHAR(255),
+      title VARCHAR(255) NOT NULL,
+      url TEXT NOT NULL,
+      focus_keyword VARCHAR(255),
+      secondary_keyword TEXT,
+      category VARCHAR(128) DEFAULT 'General',
+      author VARCHAR(128) DEFAULT 'Admin',
+      publish_date DATE NULL,
+      last_updated DATE NULL,
+      status VARCHAR(32) DEFAULT 'Draft',
+      deleted_at TIMESTAMP NULL,
+      deleted_with VARCHAR(64) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);

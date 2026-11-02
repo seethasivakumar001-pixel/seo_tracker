@@ -12,14 +12,23 @@ export function StatCard({
   iconColor = 'text-indigo-500',
   iconBg = 'bg-indigo-50 dark:bg-indigo-950/50',
   badgeText,
-  className
+  className,
+  onClick
 }) {
-  const isPositive = change > 0;
-  const isNegative = change < 0;
-  const isNeutral = change === 0 || change === undefined;
+  const numericChange = typeof change === 'string' ? parseFloat(change.replace('+', '')) : Number(change);
+  const isPositive = !isNaN(numericChange) && numericChange > 0;
+  const isNegative = !isNaN(numericChange) && numericChange < 0;
+  const isNeutral = change === undefined || (!isNaN(numericChange) && numericChange === 0) || isNaN(numericChange);
 
   return (
-    <Card className={cn('p-5 relative group hover:border-[#0062ff]/40 dark:hover:border-[#0062ff]/40 hover:shadow-lg hover:shadow-[#0062ff]/5 transition-all duration-300', className)}>
+    <Card
+      onClick={onClick}
+      className={cn(
+        'p-5 relative group hover:border-[#0062ff]/40 dark:hover:border-[#0062ff]/40 hover:shadow-lg hover:shadow-[#0062ff]/5 transition-all duration-300',
+        onClick && 'cursor-pointer',
+        className
+      )}
+    >
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -62,7 +71,7 @@ export function StatCard({
             {isNegative && <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />}
             {isNeutral && <Minus className="w-3.5 h-3.5" />}
             <span>
-              {isPositive ? `+${change}%` : `${change}%`}
+              {isPositive ? `+${numericChange}%` : `${numericChange}%`}
             </span>
           </div>
           <span className="text-slate-400 dark:text-slate-500 text-[11px] truncate">

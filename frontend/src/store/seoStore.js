@@ -16,35 +16,54 @@ import {
   apiDeleteCategory,
   syncDatabase,
 } from "../services/keywordApi";
+import { useBlogStore } from "./blogStore";
 
 const getInitialWebsites = () => {
   try {
     const saved = localStorage.getItem("rankpulse_websites");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        const nonMock = parsed.filter(w => w.id !== 'p1' && w.id !== 'p2' && w.domain !== 'techsphere.io' && w.domain !== 'datamesh.io');
+        if (nonMock.length > 0) return nonMock;
+      }
+    }
   } catch (e) {
     console.error("Error loading websites from localStorage", e);
   }
-  return initialWebsites;
+  return [];
 };
 
 const getInitialKeywords = () => {
   try {
     const saved = localStorage.getItem("rankpulse_keywords");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        const nonMock = parsed.filter(k => k.projectId !== 'p1' && k.projectId !== 'p2' && k.websiteId !== 'site-1' && k.websiteId !== 'site-2');
+        if (nonMock.length > 0) return nonMock;
+      }
+    }
   } catch (e) {
     console.error("Error loading keywords from localStorage", e);
   }
-  return initialKeywords;
+  return [];
 };
 
 const getInitialProjects = () => {
   try {
     const saved = localStorage.getItem("seo_projects");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        const nonMock = parsed.filter(p => p.id !== 'p1' && p.id !== 'p2');
+        if (nonMock.length > 0) return nonMock;
+      }
+    }
   } catch (e) {
     console.error("Error loading projects from localStorage", e);
   }
-  return initialProjects;
+  return [];
 };
 
 const getInitialCategories = () => {
@@ -54,7 +73,7 @@ const getInitialCategories = () => {
   } catch (e) {
     console.error("Error loading categories from localStorage", e);
   }
-  return initialCategories;
+  return [];
 };
 
 const getInitialSelectedWebsiteId = () => {
@@ -66,7 +85,7 @@ const getInitialSelectedWebsiteId = () => {
   } catch (e) {
     console.error("Error loading selected website from localStorage", e);
   }
-  return "site-1";
+  return "";
 };
 
 export const useSEOStore = create((set, get) => ({
@@ -145,8 +164,8 @@ export const useSEOStore = create((set, get) => ({
               position: pos,
               previousPosition: prevPos,
               change,
-              websiteId: k.websiteId || k.projectId || "site-1",
-              projectId: k.projectId || "p1",
+              websiteId: k.websiteId || k.projectId || "",
+              projectId: k.projectId || k.websiteId || "",
               history,
               history30d: history,
               monthly,
@@ -177,16 +196,16 @@ export const useSEOStore = create((set, get) => ({
               countryCode: existing?.countryCode || 'US',
               trackingFrequency: existing?.trackingFrequency || 'Daily',
               createdAt: existing?.createdAt || new Date().toISOString(),
-              seoScore: existing?.seoScore || 88,
-              organicTraffic: existing?.organicTraffic || 100000,
-              trafficChange: existing?.trafficChange || 5.0,
+              seoScore: 0,
+              organicTraffic: 0,
+              trafficChange: 0,
               totalKeywords: kwCount,
               keywordsChange: 0,
-              totalBacklinks: existing?.totalBacklinks || 12000,
+              totalBacklinks: 0,
               backlinksChange: 0,
-              referringDomains: existing?.referringDomains || 800,
-              domainRating: existing?.domainRating || 65,
-              crawlHealth: existing?.crawlHealth || 90,
+              referringDomains: 0,
+              domainRating: 0,
+              crawlHealth: 0,
               device: 'Desktop & Mobile',
               isPrimary: idx === 0,
               assignedTo: existing?.assignedTo || 'usr-admin',
@@ -219,6 +238,10 @@ export const useSEOStore = create((set, get) => ({
             categories: data.categories?.length ? data.categories : get().categories,
             keywords: normalizedKeywords,
           });
+
+          if (data.blogs && Array.isArray(data.blogs) && data.blogs.length > 0) {
+            useBlogStore.getState().setBlogs(data.blogs);
+          }
         }
       }
     } catch (err) {
@@ -260,16 +283,16 @@ export const useSEOStore = create((set, get) => ({
       countryCode: newSite.countryCode || "US",
       trackingFrequency: newSite.trackingFrequency || "Daily",
       createdAt: new Date().toISOString(),
-      seoScore: 85,
-      organicTraffic: 10000,
+      seoScore: 0,
+      organicTraffic: 0,
       trafficChange: 0,
       totalKeywords: 0,
       keywordsChange: 0,
       totalBacklinks: 0,
       backlinksChange: 0,
       referringDomains: 0,
-      domainRating: 50,
-      crawlHealth: 90,
+      domainRating: 0,
+      crawlHealth: 0,
       device: newSite.device || "Desktop & Mobile",
       isPrimary: false,
       assignedTo: newSite.assignedTo || 'usr-admin',

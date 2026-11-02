@@ -54,6 +54,11 @@
     font-weight: 700;
   }
 
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: #0062ff !important;
+  }
+
   /* Enhanced High-Contrast Global Utility Overrides */
   .text-slate-400 {
     color: #64748b !important; /* Enhanced from washed-out #94a3b8 */
@@ -244,6 +249,14 @@
   --accent-hover: #004ecc;
   --up: #10b981;
   --down: #f43f5e;
+  --mute: #64748b;
+  --ink: #0f172a;
+  --panel: #ffffff;
+  --panel-subtle: #f8fafc;
+  --line: #e2e8f0;
+}
+
+.dark {
   --mute: #94a3b8;
   --ink: #f8fafc;
   --panel: rgba(9, 24, 56, 0.85);
@@ -428,21 +441,48 @@
   border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
   cursor: pointer;
   transition: all 0.12s ease;
 }
 
 .category-chip:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.category-chip.active {
+  background: rgba(0, 98, 255, 0.12);
+  border-color: rgba(0, 98, 255, 0.35);
+  color: #0062ff;
+}
+
+.category-chip.active:hover {
+  background: rgba(0, 98, 255, 0.18);
+  color: #004ecc;
+}
+
+.dark .category-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+.dark .category-chip:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #f8fafc;
 }
 
-.category-chip.active {
-  background: rgba(0, 98, 255, 0.15);
-  border-color: rgba(0, 98, 255, 0.4);
+.dark .category-chip.active {
+  background: rgba(0, 98, 255, 0.22);
+  border-color: rgba(0, 98, 255, 0.45);
+  color: #38bdf8;
+}
+
+.dark .category-chip.active:hover {
+  background: rgba(0, 98, 255, 0.28);
   color: #38bdf8;
 }
 
@@ -454,17 +494,42 @@
   font-weight: 600;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .tabs .tab-btn:hover {
-  color: #f8fafc;
+  color: #0f172a;
+  background: rgba(15, 23, 42, 0.06);
 }
 
 .tabs .tab-btn.active {
+  background: rgba(0, 98, 255, 0.12);
+  color: #0062ff;
+}
+
+.tabs .tab-btn.active:hover {
   background: rgba(0, 98, 255, 0.18);
+  color: #004ecc;
+}
+
+.dark .tabs .tab-btn {
+  color: #94a3b8;
+}
+
+.dark .tabs .tab-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .tabs .tab-btn.active {
+  background: rgba(0, 98, 255, 0.22);
+  color: #38bdf8;
+}
+
+.dark .tabs .tab-btn.active:hover {
+  background: rgba(0, 98, 255, 0.28);
   color: #38bdf8;
 }
 
@@ -495,7 +560,7 @@
 
 .trash-restore-btn:hover {
   background: #10b981;
-  color: #0b0f19;
+  color: #ffffff;
 }
 
 .trash-delete-forever-btn {

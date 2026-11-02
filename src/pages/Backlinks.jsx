@@ -57,7 +57,16 @@ import {
   exportBacklinksToPDF
 } from '../services/backlinkService';
 import { BACKLINK_TYPES } from '../data/mockBacklinks';
-import toast from 'react-hot-toast';
+function formatDisplayDate(val) {
+  if (!val) return '';
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return val;
+  }
+}
 
 export function Backlinks() {
   const { getSelectedWebsite, selectedWebsiteId, websites, projects, categories, restoreProject, restoreCategory, purgeProject, purgeCategory, emptyTrash } = useSEOStore();
@@ -122,10 +131,6 @@ export function Backlinks() {
       const matchProject =
         b.projectId === currentProjectId ||
         b.projectId === selectedWebsiteId ||
-        (currentProjectId === 'site-1' && (b.projectId === 'p1' || b.projectId === 'site-1' || !b.projectId)) ||
-        (currentProjectId === 'p1' && (b.projectId === 'p1' || b.projectId === 'site-1' || !b.projectId)) ||
-        (currentProjectId === 'site-2' && (b.projectId === 'p2' || b.projectId === 'site-2')) ||
-        (currentProjectId === 'p2' && (b.projectId === 'p2' || b.projectId === 'site-2')) ||
         (currentDom && b.submittedUrl && b.submittedUrl.toLowerCase().includes(currentDom));
       return matchProject;
     });
@@ -159,14 +164,15 @@ export function Backlinks() {
         if (host) domains.add(host.toLowerCase());
       } catch (e) {}
     });
-    return domains.size || (projectActiveBacklinks.length > 0 ? Math.round(projectActiveBacklinks.length * 0.8) : 320);
+    return domains.size;
   }, [projectActiveBacklinks]);
 
   // Average Domain Rating
   const avgDomainRating = useMemo(() => {
-    if (!projectActiveBacklinks.length) return 72;
-    const sum = projectActiveBacklinks.reduce((acc, b) => acc + (Number(b.domainRating) || 50), 0);
-    return Math.round(sum / projectActiveBacklinks.length) || 72;
+    const itemsWithDR = projectActiveBacklinks.filter((b) => Number(b.domainRating) > 0);
+    if (!itemsWithDR.length) return 0;
+    const sum = itemsWithDR.reduce((acc, b) => acc + Number(b.domainRating), 0);
+    return Math.round(sum / itemsWithDR.length);
   }, [projectActiveBacklinks]);
 
   // Filtered & Sorted Backlinks List
@@ -314,15 +320,45 @@ export function Backlinks() {
     setSelectedIds([]);
   };
 
-  // Mock 6-Month Trend Data
-  const trendData = [
-    { month: 'May', newLinks: 4, lostLinks: 1, total: 6 },
-    { month: 'Jun', newLinks: 5, lostLinks: 0, total: 11 },
-    { month: 'Jul', newLinks: 6, lostLinks: 1, total: 16 },
-    { month: 'Aug', newLinks: 7, lostLinks: 2, total: 21 },
-    { month: 'Sep', newLinks: 8, lostLinks: 1, total: 28 },
-    { month: 'Oct', newLinks: summary.total, lostLinks: summary.brokenCount, total: summary.total }
-  ];
+  // Dynamic 6-Month Trend Data from uploaded backlinks
+  const trendData = useMemo(() => {
+    const currentMonthIdx = new Date().getMonth();
+    const last6Months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(currentMonthIdx - i);
+      const mName = d.toLocaleDateString('en-US', { month: 'short' });
+      const year = d.getFullYear();
+      const monthNum = String(d.getMonth() + 1).padStart(2, '0');
+      const yearMonth = `${year}-${monthNum}`;
+      last6Months.push({ month: mName, yearMonth, newLinks: 0, lostLinks: 0, total: 0 });
+    }
+
+    if (!projectActiveBacklinks.length) {
+      return last6Months;
+    }
+
+    projectActiveBacklinks.forEach((b) => {
+      const dateStr = b.dateSubmitted || b.createdAt || '';
+      const ym = dateStr.slice(0, 7);
+      const slot = last6Months.find((m) => m.yearMonth === ym);
+      if (slot) {
+        if (b.verificationStatus === 'Broken' || b.verificationStatus === 'Not found') {
+          slot.lostLinks += 1;
+        } else {
+          slot.newLinks += 1;
+        }
+      }
+    });
+
+    let runningTotal = 0;
+    last6Months.forEach((slot) => {
+      runningTotal += slot.newLinks;
+      slot.total = runningTotal;
+    });
+
+    return last6Months;
+  }, [projectActiveBacklinks]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -356,12 +392,9 @@ export function Backlinks() {
                   <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Total Backlinks
                   </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
+                  <div className="mt-0.5">
                     <span className="text-xl font-black text-white">
-                      {summary.total > 0 ? summary.total.toLocaleString() : '1,248'}
-                    </span>
-                    <span className="text-[11px] font-bold text-emerald-400">
-                      ↑ +12%
+                      {summary.total.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -376,12 +409,9 @@ export function Backlinks() {
                   <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Referring Domains
                   </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
+                  <div className="mt-0.5">
                     <span className="text-xl font-black text-white">
-                      {referringDomainsCount > 0 ? referringDomainsCount.toLocaleString() : '320'}
-                    </span>
-                    <span className="text-[11px] font-bold text-emerald-400">
-                      ↑ +8%
+                      {referringDomainsCount.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -396,12 +426,9 @@ export function Backlinks() {
                   <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Domain Rating
                   </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
+                  <div className="mt-0.5">
                     <span className="text-xl font-black text-white">
-                      {avgDomainRating || 72}
-                    </span>
-                    <span className="text-[11px] font-bold text-emerald-400">
-                      ↑ +5%
+                      {avgDomainRating > 0 ? avgDomainRating : '—'}
                     </span>
                   </div>
                 </div>
@@ -481,7 +508,7 @@ export function Backlinks() {
             <span className="text-xs font-bold tracking-wide uppercase text-slate-400 dark:text-slate-500">
               Total Backlinks
             </span>
-            <div className="w-9 h-9 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold shadow-xs">
+            <div className="w-9 h-9 rounded-2xl bg-blue-50 dark:bg-[#0062ff]/15 text-[#0062ff] dark:text-[#38bdf8] flex items-center justify-center font-bold shadow-xs">
               <Link2 className="w-4 h-4" />
             </div>
           </div>
@@ -546,7 +573,7 @@ export function Backlinks() {
             <span className="text-xs font-bold tracking-wide uppercase text-slate-400 dark:text-slate-500">
               Outreach Completion
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#0062ff]/10 text-[#0062ff] dark:text-[#38bdf8] border border-[#0062ff]/20">
               {summary.completionPct}%
             </span>
           </div>
@@ -572,7 +599,7 @@ export function Backlinks() {
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'all'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                ? 'bg-white dark:bg-slate-900 text-[#0062ff] dark:text-[#38bdf8] shadow-sm'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -580,7 +607,7 @@ export function Backlinks() {
             <span>All Backlinks</span>
             <span className={`px-2 py-0.2 rounded-full text-[10px] font-black ${
               activeTab === 'all'
-                ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                ? 'bg-[#0062ff]/10 text-[#0062ff] dark:text-[#38bdf8]'
                 : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
             }`}>
               {projectActiveBacklinks.length}
@@ -593,7 +620,7 @@ export function Backlinks() {
             onClick={() => setActiveTab('growth')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'growth'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                ? 'bg-white dark:bg-slate-900 text-[#0062ff] dark:text-[#38bdf8] shadow-sm'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -637,15 +664,19 @@ export function Backlinks() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} />
-                <YAxis stroke="#94a3b8" fontSize={11} />
+                <XAxis dataKey="month" stroke="#64748b" fontSize={11} fontWeight={600} />
+                <YAxis stroke="#64748b" fontSize={11} fontWeight={600} />
                 <RechartsTooltip
                   contentStyle={{
                     backgroundColor: '#0f172a',
-                    borderColor: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #334155',
                     borderRadius: 12,
-                    fontSize: 12
+                    fontSize: 12,
+                    color: '#ffffff',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)'
                   }}
+                  labelStyle={{ color: '#ffffff', fontWeight: 700, marginBottom: '4px' }}
+                  itemStyle={{ color: '#ffffff', fontWeight: 600 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="newLinks" name="New Acquired Links" fill="#10b981" radius={[4, 4, 0, 0]} />
@@ -668,7 +699,7 @@ export function Backlinks() {
                 placeholder="Search website, target URL, anchor text, notes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-900 dark:text-white placeholder-slate-400 transition-all"
+                className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-[#0062ff]/50 text-slate-900 dark:text-white placeholder-slate-400 transition-all"
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               {searchQuery && (
@@ -686,7 +717,7 @@ export function Backlinks() {
             <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto">
               {/* Status Filter */}
               <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs shadow-2xs">
-                <Filter className="w-3.5 h-3.5 text-indigo-500" />
+                <Filter className="w-3.5 h-3.5 text-[#0062ff]" />
                 <span className="text-slate-400 font-semibold">Status:</span>
                 <select
                   value={statusFilter}
@@ -701,7 +732,7 @@ export function Backlinks() {
 
               {/* Type Filter */}
               <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs shadow-2xs">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#0062ff]" />
                 <span className="text-slate-400 font-semibold">Type:</span>
                 <select
                   value={typeFilter}
@@ -719,7 +750,7 @@ export function Backlinks() {
 
               {/* Sort Order */}
               <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs shadow-2xs">
-                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-500" />
+                <ArrowUpDown className="w-3.5 h-3.5 text-[#0062ff]" />
                 <span className="text-slate-400 font-semibold">Sort:</span>
                 <select
                   value={sortField}
@@ -735,7 +766,7 @@ export function Backlinks() {
                 <button
                   type="button"
                   onClick={() => setSortAsc(!sortAsc)}
-                  className="px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-500/20 cursor-pointer transition-colors text-[10px]"
+                  className="px-2 py-0.5 rounded-lg bg-[#0062ff]/10 text-[#0062ff] dark:text-[#38bdf8] font-bold hover:bg-[#0062ff]/20 cursor-pointer transition-colors text-[10px]"
                 >
                   {sortAsc ? '▲ ASC' : '▼ DESC'}
                 </button>
@@ -745,16 +776,16 @@ export function Backlinks() {
 
           {/* ═══ BULK ACTIONS BAR (Appears when items are checked) ═══ */}
           {selectedIds.length > 0 && (
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-pink-500/10 border border-indigo-500/30 flex items-center justify-between flex-wrap gap-3 animate-in fade-in slide-in-from-top-2 duration-150 shadow-sm backdrop-blur-md">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#0062ff]/15 via-blue-500/10 to-sky-500/10 border border-[#0062ff]/30 flex items-center justify-between flex-wrap gap-3 animate-in fade-in slide-in-from-top-2 duration-150 shadow-sm backdrop-blur-md">
               <div className="flex items-center gap-2.5 text-xs font-bold text-slate-900 dark:text-white">
-                <span className="w-6 h-6 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                <span className="w-6 h-6 rounded-xl bg-[#0062ff] text-white flex items-center justify-center text-xs font-black shadow-xs">
                   {selectedIds.length}
                 </span>
                 <span>{selectedIds.length} {selectedIds.length === 1 ? 'backlink' : 'backlinks'} selected</span>
                 <button
                   type="button"
                   onClick={() => setSelectedIds([])}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold ml-2 cursor-pointer"
+                  className="text-xs text-[#0062ff] dark:text-[#38bdf8] hover:underline font-semibold ml-2 cursor-pointer"
                 >
                   Deselect all
                 </button>
@@ -801,15 +832,16 @@ export function Backlinks() {
                       type="checkbox"
                       checked={allCurrentSelected}
                       onChange={handleSelectAllCurrent}
-                      className="cursor-pointer rounded accent-indigo-600 w-4 h-4"
+                      style={{ accentColor: '#0062ff' }}
+                      className="cursor-pointer rounded accent-[#0062ff] w-4 h-4"
                       aria-label="Select all rows"
                     />
                   </th>
                   <th className="py-3.5 px-3 text-center" style={{ width: 50 }}>S.No</th>
-                  <th className="py-3.5 px-4 min-w-[200px]">Website Name & Info</th>
-                  <th className="py-3.5 px-4 min-w-[220px]">Website URL (Source)</th>
-                  <th className="py-3.5 px-4 min-w-[220px]">Submitted URL (Target Page)</th>
-                  <th className="py-3.5 px-3 text-center" style={{ width: 110 }}>Status</th>
+                  <th className="py-3.5 px-4 min-w-[240px]">Website Name & Info</th>
+                  <th className="py-3.5 px-4 min-w-[230px]">Website URL (Source)</th>
+                  <th className="py-3.5 px-4 min-w-[230px]">Submitted URL (Target Page)</th>
+                  <th className="py-3.5 px-3 text-center" style={{ width: 120 }}>Status</th>
                   <th className="py-3.5 px-3 text-center" style={{ width: 140 }}>Live Verification</th>
                   <th className="py-3.5 px-4 text-right" style={{ width: 100 }}>Actions</th>
                 </tr>
@@ -819,7 +851,7 @@ export function Backlinks() {
                   <tr>
                     <td colSpan={8} className="py-16 text-center text-slate-400">
                       <div className="max-w-sm mx-auto space-y-3">
-                        <div className="w-14 h-14 rounded-3xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto shadow-inner">
+                        <div className="w-14 h-14 rounded-3xl bg-[#0062ff]/10 text-[#0062ff] flex items-center justify-center mx-auto shadow-inner">
                           <Link2 className="w-7 h-7 opacity-80" />
                         </div>
                         <p className="font-extrabold text-slate-800 dark:text-slate-200 text-base">
@@ -849,44 +881,47 @@ export function Backlinks() {
                         key={b.id}
                         className={`transition-colors duration-150 ${
                           isSelected
-                            ? 'bg-indigo-500/10 dark:bg-indigo-950/40'
+                            ? 'bg-blue-50/80 dark:bg-[#0062ff]/15'
                             : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
                         }`}
                       >
                         {/* Checkbox */}
-                        <td className="py-3.5 px-3 text-center">
+                        <td className="py-3.5 px-3 text-center align-middle">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleRowSelect(b.id)}
-                            className="cursor-pointer rounded accent-indigo-600 w-4 h-4"
+                            style={{ accentColor: '#0062ff' }}
+                            className="cursor-pointer rounded accent-[#0062ff] w-4 h-4"
                           />
                         </td>
 
                         {/* S.No */}
-                        <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-400 text-[11px]">
+                        <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-400 text-[11px] align-middle whitespace-nowrap">
                           {serialNumber}
                         </td>
 
                         {/* Website Name & Tag Details */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span>{b.websiteName}</span>
+                        <td className="py-3.5 px-4 align-middle">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-slate-900 dark:text-white text-xs truncate max-w-[170px]" title={b.websiteName}>
+                              {b.websiteName}
+                            </span>
                             {b.domainRating && (
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-black border border-slate-200/60 dark:border-slate-700/60">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#0062ff]/10 dark:bg-[#0062ff]/20 text-[#0062ff] dark:text-[#38bdf8] font-black border border-[#0062ff]/20 whitespace-nowrap flex-shrink-0">
                                 DR {b.domainRating}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                               {b.type || 'Directory'}
                             </span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0062ff]/10 dark:bg-[#0062ff]/20 text-[#0062ff] dark:text-[#38bdf8] border border-[#0062ff]/20 whitespace-nowrap">
                               {b.linkAttribute || 'Dofollow'}
                             </span>
                             {b.anchorText && (
-                              <span className="text-[10px] text-slate-400 italic truncate max-w-[150px] bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded" title={b.anchorText}>
+                              <span className="text-[10px] text-slate-400 italic truncate max-w-[140px] bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded" title={b.anchorText}>
                                 "{b.anchorText}"
                               </span>
                             )}
@@ -894,49 +929,53 @@ export function Backlinks() {
                         </td>
 
                         {/* Website URL (Clickable external link) */}
-                        <td className="py-3.5 px-4">
-                          <a
-                            href={b.websiteUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-mono text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1.5 truncate max-w-xs group font-semibold"
-                            title={b.websiteUrl}
-                          >
-                            <span className="truncate">{b.websiteUrl}</span>
-                            <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
-                          </a>
-                          {b.dateSubmitted && (
-                            <span className="text-[10px] text-slate-400 mt-1 block">
-                              Submitted: {b.dateSubmitted}
-                            </span>
-                          )}
+                        <td className="py-3.5 px-4 align-middle">
+                          <div className="space-y-1">
+                            <a
+                              href={b.websiteUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono text-[11px] text-[#0062ff] dark:text-[#38bdf8] hover:underline inline-flex items-center gap-1.5 truncate max-w-xs group font-semibold"
+                              title={b.websiteUrl}
+                            >
+                              <span className="truncate">{b.websiteUrl}</span>
+                              <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
+                            </a>
+                            {b.dateSubmitted && (
+                              <span className="text-[10px] text-slate-400 block whitespace-nowrap font-medium">
+                                Submitted: {formatDisplayDate(b.dateSubmitted)}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Submitted URL (Clickable page on my site) */}
-                        <td className="py-3.5 px-4">
-                          <a
-                            href={b.submittedUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-mono text-[11px] text-slate-700 dark:text-slate-300 hover:text-indigo-500 inline-flex items-center gap-1.5 truncate max-w-xs group font-semibold"
-                            title={b.submittedUrl}
-                          >
-                            <span className="truncate">{b.submittedUrl}</span>
-                            <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
-                          </a>
-                          {b.notes && (
-                            <p className="text-[10px] text-slate-400 truncate max-w-xs mt-1" title={b.notes}>
-                              💬 {b.notes}
-                            </p>
-                          )}
+                        <td className="py-3.5 px-4 align-middle">
+                          <div className="space-y-1">
+                            <a
+                              href={b.submittedUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono text-[11px] text-slate-700 dark:text-slate-300 hover:text-[#0062ff] dark:hover:text-[#38bdf8] inline-flex items-center gap-1.5 truncate max-w-xs group font-semibold transition-colors"
+                              title={b.submittedUrl}
+                            >
+                              <span className="truncate">{b.submittedUrl}</span>
+                              <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
+                            </a>
+                            {b.notes && (
+                              <p className="text-[10px] text-slate-400 truncate max-w-xs" title={b.notes}>
+                                💬 {b.notes}
+                              </p>
+                            )}
+                          </div>
                         </td>
 
                         {/* Status (Clickable Badge to Flip Done/Undone) */}
-                        <td className="py-3.5 px-3 text-center">
+                        <td className="py-3.5 px-3 text-center align-middle whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(b.id)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-2xs ${
+                            className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-2xs min-w-[94px] ${
                               b.status === 'Done'
                                 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
@@ -958,10 +997,10 @@ export function Backlinks() {
                         </td>
 
                         {/* Live Verification Status & Check Button */}
-                        <td className="py-3.5 px-3 text-center">
+                        <td className="py-3.5 px-3 text-center align-middle whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1.5">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap ${
                                 b.verificationStatus === 'Live'
                                   ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                                   : b.verificationStatus === 'Broken'
@@ -981,15 +1020,15 @@ export function Backlinks() {
                             <button
                               type="button"
                               onClick={() => handleVerifyLink(b.id)}
-                              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                              className="p-1 rounded-lg text-slate-400 hover:text-[#0062ff] hover:bg-blue-50 dark:hover:bg-[#0062ff]/10 transition-colors cursor-pointer"
                               title="Test live verification"
                             >
                               <RefreshCw className="w-3 h-3" />
                             </button>
                           </div>
                           {b.lastChecked && (
-                            <span className="text-[9px] text-slate-400 block mt-1">
-                              {b.lastChecked}
+                            <span className="text-[9px] text-slate-400 block mt-1 font-mono">
+                              {formatDisplayDate(b.lastChecked)}
                             </span>
                           )}
                         </td>
@@ -1003,7 +1042,7 @@ export function Backlinks() {
                                 setEditingItem(b);
                                 setIsAddModalOpen(true);
                               }}
-                              className="p-1.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-xl text-slate-400 hover:text-[#0062ff] hover:bg-blue-50 dark:hover:bg-[#0062ff]/10 transition-colors cursor-pointer"
                               title="Edit Backlink"
                             >
                               <Edit2 className="w-3.5 h-3.5" />

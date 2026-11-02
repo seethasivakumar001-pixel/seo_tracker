@@ -14,6 +14,7 @@ const AddKeywordPage = lazy(() => import('./pages/AddKeywordPage').then(m => ({ 
 const Rankings = lazy(() => import('./pages/Rankings').then(m => ({ default: m.Rankings })));
 const SiteAudit = lazy(() => import('./pages/SiteAudit').then(m => ({ default: m.SiteAudit })));
 const OnPageSEO = lazy(() => import('./pages/OnPageSEO').then(m => ({ default: m.OnPageSEO })));
+const Blogs = lazy(() => import('./pages/Blogs').then(m => ({ default: m.Blogs })));
 const Backlinks = lazy(() => import('./pages/Backlinks').then(m => ({ default: m.Backlinks })));
 const Performance = lazy(() => import('./pages/Performance').then(m => ({ default: m.Performance })));
 const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
@@ -131,6 +132,7 @@ export default function App() {
                 <Route path="/rankings" element={<Rankings />} />
                 <Route path="/site-audit" element={<SiteAudit />} />
                 <Route path="/on-page-seo" element={<OnPageSEO />} />
+                <Route path="/blogs" element={<Blogs />} />
                 <Route path="/backlinks" element={<Backlinks />} />
                 <Route path="/performance" element={<Performance />} />
                 <Route path="/reports" element={<Reports />} />

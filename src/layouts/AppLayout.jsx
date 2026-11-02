@@ -31,12 +31,14 @@ import {
   MoreHorizontal,
   Globe,
   ShieldCheck,
-  Users
+  Users,
+  BookOpen
 } from 'lucide-react';
 import { useSEOStore } from '../store/seoStore';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useBacklinkStore } from '../store/backlinkStore';
+import { useBlogStore } from '../store/blogStore';
 import { DateRangePicker } from '../components/DateRangePicker';
 import { Tooltip } from '../components/Tooltip';
 import { GlobalSearchModal } from '../components/GlobalSearchModal';
@@ -51,6 +53,7 @@ const mainNavItems = [
   { path: '/rankings', label: 'Rankings', icon: TrendingUp },
   { path: '/site-audit', label: 'Site Audit', icon: Activity },
   { path: '/on-page-seo', label: 'On-Page SEO', icon: FileSearch },
+  { path: '/blogs', label: 'Blogs', icon: BookOpen },
   { path: '/backlinks', label: 'Backlinks', icon: Link2 },
   { path: '/performance', label: 'Performance', icon: Gauge },
 ];
@@ -100,6 +103,7 @@ export function AppLayout() {
     loadDbData
   } = useSEOStore();
   const { backlinks, addBacklink, restoreBacklink, purgeBacklink } = useBacklinkStore();
+  const { blogs, restoreBlog, purgeBlog } = useBlogStore();
   const { getUnreadCount } = useNotificationStore();
 
   const isPM = Boolean(user?.isPM || user?.role?.includes('PM') || user?.role?.includes('Project Manager'));
@@ -135,7 +139,8 @@ export function AppLayout() {
   const trashedCategories = useMemo(() => (categories || []).filter((c) => c.deletedAt), [categories]);
   const trashedProjects = useMemo(() => (projects || []).filter((p) => p.deletedAt), [projects]);
   const trashedBacklinksList = useMemo(() => (backlinks || []).filter((b) => b.isDeleted || b.deletedAt), [backlinks]);
-  const totalTrashCount = trashedKeywords.length + trashedCategories.length + trashedProjects.length + trashedBacklinksList.length;
+  const trashedBlogsList = useMemo(() => (blogs || []).filter((b) => b.deletedAt), [blogs]);
+  const totalTrashCount = trashedKeywords.length + trashedCategories.length + trashedProjects.length + trashedBacklinksList.length + trashedBlogsList.length;
 
   const handleBulkRestore = (type, ids) => {
     if (type === 'keywords') {
@@ -150,6 +155,9 @@ export function AppLayout() {
     } else if (type === 'backlinks') {
       ids.forEach((id) => restoreBacklink && restoreBacklink(id));
       toast.success(`Restored ${ids.length} backlinks`);
+    } else if (type === 'blogs') {
+      ids.forEach((id) => restoreBlog && restoreBlog(id));
+      toast.success(`Restored ${ids.length} blogs`);
     }
   };
 
@@ -166,12 +174,16 @@ export function AppLayout() {
     } else if (type === 'backlinks') {
       ids.forEach((id) => purgeBacklink && purgeBacklink(id));
       toast.success(`Permanently deleted ${ids.length} backlinks`);
+    } else if (type === 'blogs') {
+      ids.forEach((id) => purgeBlog && purgeBlog(id));
+      toast.success(`Permanently deleted ${ids.length} blogs`);
     }
   };
 
   const handleEmptyTrash = () => {
     emptyTrash();
     trashedBacklinksList.forEach((b) => purgeBacklink && purgeBacklink(b.id));
+    trashedBlogsList.forEach((b) => purgeBlog && purgeBlog(b.id));
     toast.success('Trash emptied completely');
   };
 
@@ -682,9 +694,9 @@ export function AppLayout() {
       {/* Main Content Area - Fixed Viewport with Independent Scrolling */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-white dark:bg-[#050e24]">
         {/* Topbar Header */}
-        <header className="h-16 flex-shrink-0 px-4 sm:px-6 bg-white dark:bg-[#091838] border-b border-slate-200/80 dark:border-[#183164]/80 sticky top-0 z-30 flex items-center justify-between gap-3 shadow-xs">
+        <header className="h-16 flex-shrink-0 px-3 sm:px-6 bg-white dark:bg-[#091838] border-b border-slate-200/80 dark:border-[#183164]/80 sticky top-0 z-30 flex items-center justify-between gap-2 sm:gap-3 shadow-xs">
           {/* Left: Mobile menu button & Active Project Selector */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0 min-w-0">
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
@@ -695,11 +707,11 @@ export function AppLayout() {
             </button>
 
             {/* Project Switcher Dropdown */}
-            <div className="relative" ref={siteDropdownRef}>
+            <div className="relative min-w-0" ref={siteDropdownRef}>
               <button
                 type="button"
                 onClick={() => setSiteDropdownOpen(!siteDropdownOpen)}
-                className="h-9 px-3 flex items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] hover:bg-slate-50 dark:hover:bg-slate-800/80 text-xs font-semibold text-slate-800 dark:text-slate-100 shadow-2xs transition-all cursor-pointer group max-w-[220px] sm:max-w-[280px]"
+                className="h-9 px-2.5 sm:px-3 flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] hover:bg-slate-50 dark:hover:bg-slate-800/80 text-xs font-semibold text-slate-800 dark:text-slate-100 shadow-2xs transition-all cursor-pointer group max-w-[125px] sm:max-w-[200px] md:max-w-[280px]"
                 title="Switch Active Project / Domain"
               >
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ring-2 animate-pulse ${isPM ? 'bg-amber-500 ring-amber-500/20' : 'bg-emerald-500 ring-emerald-500/20'}`} />
@@ -709,7 +721,7 @@ export function AppLayout() {
                     PM
                   </span>
                 )}
-                <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 transition-transform duration-200 flex-shrink-0 ml-auto", siteDropdownOpen && "rotate-180")} />
+                <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 group-hover:text-[#0062ff] transition-transform duration-200 flex-shrink-0 ml-auto", siteDropdownOpen && "rotate-180")} />
               </button>
 
               {siteDropdownOpen && (
@@ -724,7 +736,7 @@ export function AppLayout() {
                           </>
                         ) : (
                           <>
-                            <Users className="w-3.5 h-3.5 text-indigo-400" />
+                            <Users className="w-3.5 h-3.5 text-[#0062ff]" />
                             <span>My Projects ({accessibleWebsites.length})</span>
                           </>
                         )}
@@ -750,7 +762,7 @@ export function AppLayout() {
                             className={cn(
                               "w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-all cursor-pointer",
                               isSelected
-                                ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20"
+                                ? "bg-blue-50 dark:bg-blue-950/40 text-[#0062ff] dark:text-[#38bdf8] font-bold border border-[#0062ff]/20"
                                 : "text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 font-medium"
                             )}
                           >
@@ -760,7 +772,7 @@ export function AppLayout() {
                                 <span className="truncate">{site.domain}</span>
                                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-normal">
                                   {site.assignedName && (
-                                    <span className="text-indigo-500 dark:text-indigo-400 font-semibold">
+                                    <span className="text-[#0062ff] dark:text-[#38bdf8] font-semibold">
                                       👤 {site.assignedName}
                                     </span>
                                   )}
@@ -768,7 +780,7 @@ export function AppLayout() {
                                 </div>
                               </div>
                             </div>
-                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 ml-2" />}
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#0062ff] dark:text-[#38bdf8] flex-shrink-0 ml-2" />}
                           </button>
                         );
                       })
@@ -781,7 +793,7 @@ export function AppLayout() {
                         setSiteDropdownOpen(false);
                         setIsAddProjectModalOpen(true);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 rounded-xl flex items-center gap-2 font-semibold cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs text-[#0062ff] dark:text-[#38bdf8] hover:bg-blue-50/50 dark:hover:bg-blue-950/30 rounded-xl flex items-center gap-2 font-semibold cursor-pointer"
                     >
                       <PlusSquare className="w-3.5 h-3.5" />
                       <span>+ Add New Project</span>
@@ -792,15 +804,15 @@ export function AppLayout() {
             </div>
           </div>
 
-          {/* Center: Global Quick Search with Command Badge */}
-          <div className="flex-1 max-w-md mx-2 lg:mx-4 min-w-[180px]">
+          {/* Center: Global Quick Search with Command Badge (desktop only) */}
+          <div className="hidden md:flex flex-1 max-w-md mx-2 lg:mx-4">
             <button
               type="button"
               onClick={() => setIsGlobalSearchOpen(true)}
-              className="w-full h-9 px-3.5 flex items-center justify-between text-xs bg-slate-100/90 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/60 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-indigo-500/50 transition-all shadow-2xs group cursor-pointer text-left"
+              className="w-full h-9 px-3.5 flex items-center justify-between text-xs bg-slate-100/90 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/60 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-[#0062ff]/50 transition-all shadow-2xs group cursor-pointer text-left"
             >
               <div className="flex items-center gap-2.5 truncate">
-                <Search className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors flex-shrink-0" />
+                <Search className="w-4 h-4 text-slate-400 group-hover:text-[#0062ff] transition-colors flex-shrink-0" />
                 <span className="truncate">Search backlinks, keywords, projects...</span>
               </div>
               <kbd className="px-1.5 py-0.5 text-[10px] font-bold font-mono text-slate-400 dark:text-slate-400 bg-white dark:bg-slate-700/80 rounded-md border border-slate-200 dark:border-slate-600 shadow-2xs flex-shrink-0">
@@ -810,7 +822,19 @@ export function AppLayout() {
           </div>
 
           {/* Right Toolbar Controls */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            {/* Mobile Quick Search Button (visible below md) */}
+            <Tooltip content="Quick Search">
+              <button
+                type="button"
+                onClick={() => setIsGlobalSearchOpen(true)}
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#0062ff] dark:hover:text-[#38bdf8] transition-all shadow-2xs flex-shrink-0 cursor-pointer"
+                aria-label="Search backlinks, keywords, projects"
+              >
+                <Search className="w-4 h-4 text-slate-500" />
+              </button>
+            </Tooltip>
+
             {/* Live Refresh Button */}
             <Tooltip content="Live SERP Refresh">
               <button
@@ -818,11 +842,11 @@ export function AppLayout() {
                 onClick={handleRefreshData}
                 className={cn(
                   'w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs flex-shrink-0 cursor-pointer',
-                  isRefreshing && 'text-indigo-600 dark:text-indigo-400'
+                  isRefreshing && 'text-[#0062ff] dark:text-[#38bdf8]'
                 )}
                 aria-label="Refresh SERP ranking"
               >
-                <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin text-indigo-500')} />
+                <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin text-[#0062ff]')} />
               </button>
             </Tooltip>
 
@@ -848,7 +872,7 @@ export function AppLayout() {
               <button
                 type="button"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="h-9 px-2 flex items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] hover:ring-2 hover:ring-indigo-500/30 transition-all flex-shrink-0 cursor-pointer"
+                className="h-9 px-2 flex items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f172a] hover:ring-2 hover:ring-[#0062ff]/30 transition-all flex-shrink-0 cursor-pointer"
               >
                 <img
                   src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
@@ -867,7 +891,7 @@ export function AppLayout() {
                       <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.name}</p>
                     </div>
                     <p className="text-[11px] text-slate-400 truncate mt-0.5">{user?.email}</p>
-                    <p className="text-[10px] text-indigo-400 font-medium mt-0.5">{user?.role}</p>
+                    <p className="text-[10px] text-[#0062ff] dark:text-[#38bdf8] font-medium mt-0.5">{user?.role}</p>
                   </div>
 
                   <div className="py-1 px-1">
@@ -903,8 +927,8 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* Page Content Outlet - Independent Scroll View */}
-        <main className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Page Content Outlet - Independent Scroll View with Mobile Protection */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3.5 sm:p-6 lg:p-8 space-y-6">
           <Outlet />
         </main>
       </div>
@@ -1041,6 +1065,7 @@ export function AppLayout() {
         trashedCategories={trashedCategories}
         trashedKeywords={trashedKeywords}
         trashedBacklinks={trashedBacklinksList}
+        trashedBlogs={trashedBlogsList}
         allProjects={projects || []}
         allCategories={categories || []}
         onRestoreProject={(p) => {
@@ -1059,6 +1084,10 @@ export function AppLayout() {
           restoreBacklink(b);
           toast.success("Backlink restored from Trash");
         }}
+        onRestoreBlog={(b) => {
+          restoreBlog(b.id || b);
+          toast.success("Blog post restored from Trash");
+        }}
         onPurgeProject={(p) => {
           purgeProject(p);
           toast.success("Project permanently deleted");
@@ -1074,6 +1103,10 @@ export function AppLayout() {
         onPurgeBacklink={(b) => {
           purgeBacklink(b);
           toast.success("Backlink permanently deleted");
+        }}
+        onPurgeBlog={(b) => {
+          purgeBlog(b.id || b);
+          toast.success("Blog post permanently deleted");
         }}
         onBulkRestore={handleBulkRestore}
         onBulkPurge={handleBulkPurge}

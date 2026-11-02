@@ -1,6 +1,22 @@
 import React from 'react';
 import { cn } from '../utils/cn';
 
+export const getAuditGrade = (score) => {
+  const s = Number(score) || 0;
+  if (s >= 90) return 'A';
+  if (s >= 75) return 'B';
+  if (s >= 60) return 'C';
+  if (s >= 40) return 'D';
+  return 'F';
+};
+
+export const getAuditScoreColor = (score) => {
+  const s = Number(score) || 0;
+  if (s >= 90) return { stroke: '#10b981', text: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/40', border: 'border-emerald-200 dark:border-emerald-800' };
+  if (s >= 50) return { stroke: '#f97316', text: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-950/40', border: 'border-orange-200 dark:border-orange-800' };
+  return { stroke: '#ef4444', text: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-950/40', border: 'border-rose-200 dark:border-rose-800' };
+};
+
 export function ScoreRing({
   score = 80,
   max = 100,
@@ -9,28 +25,48 @@ export function ScoreRing({
   label = 'SEO Health',
   sublabel = '',
   className,
-  showGrade = false
+  showGrade = false,
+  useLetterGrades = false,
+  customGrade,
+  customColor,
+  customBgColor
 }) {
+  const isUntested = score === null || score === undefined || score === '' || score === '—' || isNaN(Number(score));
+  const numericScore = isUntested ? 0 : Number(score);
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const percentage = Math.min(100, Math.max(0, (score / max) * 100));
+  const percentage = isUntested ? 0 : Math.min(100, Math.max(0, (numericScore / max) * 100));
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   // Determine color theme
-  let color = '#10b981'; // emerald
-  let bgColor = 'text-emerald-500';
-  let grade = 'A';
+  let color = customColor || '#94a3b8'; // slate for untested
+  let bgColor = customBgColor || 'text-slate-400';
+  let grade = customGrade || 'Not Tested';
 
-  if (score < 60) {
-    color = '#ef4444'; // rose
-    bgColor = 'text-rose-500';
-    grade = 'Needs Work';
-  } else if (score < 80) {
-    color = '#f59e0b'; // amber
-    bgColor = 'text-amber-500';
-    grade = 'Good';
-  } else if (score >= 90) {
-    grade = 'Excellent';
+  if (!isUntested && !customColor) {
+    if (useLetterGrades) {
+      const theme = getAuditScoreColor(numericScore);
+      const letter = getAuditGrade(numericScore);
+      color = theme.stroke;
+      bgColor = theme.text;
+      grade = customGrade || `Grade ${letter}`;
+    } else {
+      if (numericScore < 60) {
+        color = '#ef4444'; // rose
+        bgColor = 'text-rose-500';
+        grade = 'Needs Work';
+      } else if (numericScore < 80) {
+        color = '#f59e0b'; // amber
+        bgColor = 'text-amber-500';
+        grade = 'Good';
+      } else {
+        color = '#10b981'; // emerald
+        bgColor = 'text-emerald-500';
+        grade = 'Excellent';
+      }
+    }
+  } else if (!isUntested && customGrade) {
+    grade = customGrade;
   }
 
   return (
@@ -64,7 +100,7 @@ export function ScoreRing({
         {/* Center score display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
           <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {score}
+            {isUntested ? '—' : numericScore}
             <span className="text-xs text-slate-400 font-normal">/{max}</span>
           </span>
           {showGrade && (

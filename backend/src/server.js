@@ -1,7 +1,13 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import dns from "dns";
 import { getDb } from "./config/db.js";
+
+// Ensure Node fetches resolve IPv4 first to avoid IPv6 timeouts
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {}
 
 // Routes
 import authRoutes from "./routes/auth.routes.js";
@@ -11,6 +17,9 @@ import categoryRoutes from "./routes/categories.routes.js";
 import backlinkRoutes from "./routes/backlinks.routes.js";
 import pagespeedRoutes from "./routes/pagespeed.routes.js";
 import dataRoutes from "./routes/data.routes.js";
+import searchconsoleRoutes from "./routes/searchconsole.routes.js";
+import ga4Routes from "./routes/ga4.routes.js";
+import blogRoutes from "./routes/blogs.routes.js";
 
 dotenv.config();
 
@@ -55,6 +64,9 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/backlinks", backlinkRoutes);
 app.use("/api/pagespeed", pagespeedRoutes);
 app.use("/api/data", dataRoutes);
+app.use("/api/searchconsole", searchconsoleRoutes);
+app.use("/api/ga4", ga4Routes);
+app.use("/api/blogs", blogRoutes);
 
 // Root Welcome Endpoint
 app.get("/", (req, res) => {

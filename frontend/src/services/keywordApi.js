@@ -251,3 +251,70 @@ export async function apiBulkCreateBacklinks(backlinks) {
     console.warn("apiBulkCreateBacklinks failed:", err.message);
   }
 }
+
+// Blog CRUD APIs
+export async function apiFetchBlogs(projectId, domain) {
+  try {
+    const params = new URLSearchParams();
+    if (projectId) params.append("projectId", projectId);
+    if (domain) params.append("domain", domain);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetch(`${API_BASE}/blogs${query}`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.warn("apiFetchBlogs failed:", err.message);
+    return [];
+  }
+}
+
+export async function apiCreateBlog(blog) {
+  try {
+    const res = await fetch(`${API_BASE}/blogs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(blog),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.blog || data;
+    }
+  } catch (err) {
+    console.warn("apiCreateBlog failed:", err.message);
+  }
+}
+
+export async function apiUpdateBlog(id, updates) {
+  try {
+    const res = await fetch(`${API_BASE}/blogs/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.blog || data;
+    }
+  } catch (err) {
+    console.warn("apiUpdateBlog failed:", err.message);
+  }
+}
+
+export async function apiDeleteBlog(id, hard = false) {
+  try {
+    const query = hard ? "?hard=true" : "";
+    const res = await fetch(`${API_BASE}/blogs/${id}${query}`, { method: "DELETE" });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn("apiDeleteBlog failed:", err.message);
+  }
+}
+
+export async function apiRestoreBlog(id) {
+  try {
+    const res = await fetch(`${API_BASE}/blogs/${id}/restore`, { method: "POST" });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn("apiRestoreBlog failed:", err.message);
+  }
+}
